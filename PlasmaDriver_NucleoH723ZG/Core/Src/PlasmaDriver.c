@@ -24,7 +24,7 @@ extern ADC_HandleTypeDef hadc3;
 static uint16_t debug = 1;
 
 // *** Menu table ***
-#define MAX_MENU_SIZE 12
+#define MAX_MENU_SIZE 13
 static char *menu[MAX_MENU_SIZE];
 static uint16_t menu_size;
 #define CONFIG_MENU_SIZE 2
@@ -694,6 +694,52 @@ void doneMeasuringBridgePlasmaADC12(uint32_t errorCode)
 	//HAL_GPIO_WritePin(TEST_OUTPUT_GPIO_Port, TEST_OUTPUT_Pin, GPIO_PIN_RESET);
 }
 
+// Automatically Correct the Drive Frequency until user presses 'q'
+void autoFreqAdj(void)
+{
+	char input;
+
+	printString("\n\r%Press any key to exit");
+
+	while (!(HAL_UART_Receive(&huart3, (uint8_t *) &input, 1, 1) == HAL_OK))
+	{
+		measureBridgePlasmaADC12();
+		//Wait until ADC3 reading is done
+		while (sADC.adc12_reading);
+		//printADC12data();
+
+		int16_t freqCorr;
+		freqCorrection(&freqCorr);
+
+		char text[100];
+		sprintf(text, "\n\rFrequency correction: %i", (int) freqCorr);
+		printString(text);
+
+		if (sHbridge.frequency + freqCorr > MAX_FREQUENCY) //GetUint16Input(&sHbridge.frequency, 1, MIN_FREQUENCY, MAX_FREQUENCY))
+		{   // Calculated freq is higher than max
+
+			sprintf(text, "\n\r%i is higher than max freq", (int) sHbridge.frequency + freqCorr);
+			printString(text);
+			sHbridge.frequency = MAX_FREQUENCY;
+		}
+		else if (sHbridge.frequency + freqCorr < MIN_FREQUENCY)
+		{
+			sprintf(text, "\n\r%i is lower than min freq", (int) sHbridge.frequency + freqCorr);
+			printString(text);
+
+			sHbridge.frequency = MIN_FREQUENCY;
+
+		}
+		else
+		{
+			sHbridge.frequency = sHbridge.frequency + freqCorr;
+		}
+
+		programHbridge();
+		printHbridgeData();
+	}
+}
+
 //Convert ADC3 data to voltages
 float convertADC3data(uint32_t item, char **text)
 {
@@ -1078,6 +1124,7 @@ static void InitializeMenu(void)
 		menu[item++] = "   z: Debug output (On/Off)";
 		menu[item++] = "   c: Show/Change configuration";
 		menu[item++] = "   t: Test GPIO";
+		menu[item++] = "   y: Auto Frequency Adjustment";
 	}
 	else if ((sFlashConfig.mode == RUN_MODE))
 	{
@@ -1319,6 +1366,10 @@ static void TestModeAction(char input)
 
 		case 't': //Test GPIO
 			testGPIO();
+			break;
+
+		case 'y': //Auto Freq Adjust
+			autoFreqAdj();
 			break;
 	}
 }
