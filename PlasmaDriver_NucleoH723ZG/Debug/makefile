@@ -1,6 +1,6 @@
 ################################################################################
 # Automatically-generated file. Do not edit!
-# Toolchain: GNU Tools for STM32 (11.3.rel1)
+# Toolchain: GNU Tools for STM32 (12.3.rel1)
 ################################################################################
 
 -include ../makefile.init
@@ -60,8 +60,8 @@ all: main-build
 main-build: PlasmaDriver_NucleoH723ZG.elf secondary-outputs
 
 # Tool invocations
-PlasmaDriver_NucleoH723ZG.elf PlasmaDriver_NucleoH723ZG.map: $(OBJS) $(USER_OBJS) C:\Users\kimbr\OneDrive\Workspace\STM32CubeIDE\PlasmaDriver_NucleoH723ZG\STM32H723ZGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "PlasmaDriver_NucleoH723ZG.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m7 -T"C:\Users\kimbr\OneDrive\Workspace\STM32CubeIDE\PlasmaDriver_NucleoH723ZG\STM32H723ZGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="PlasmaDriver_NucleoH723ZG.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv5-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+PlasmaDriver_NucleoH723ZG.elf PlasmaDriver_NucleoH723ZG.map: $(OBJS) $(USER_OBJS) /home/lukas/git/PlasmaControl/PlasmaDriver_NucleoH723ZG/STM32H723ZGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "PlasmaDriver_NucleoH723ZG.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m7 -T"/home/lukas/git/PlasmaControl/PlasmaDriver_NucleoH723ZG/STM32H723ZGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="PlasmaDriver_NucleoH723ZG.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv5-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

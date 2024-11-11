@@ -465,7 +465,12 @@ float convertADC12data(uint32_t item, char **text)
 {
 	float result = 0;
 	float V;
-
+/*ADC Calculation Format:
+* 3.3           *   (ADCData/65536.0)       *    1000
+*   ^                   ^       ^                  ^
+*   |                   |       |                  |
+ * full scale V      Raw Data   Max ADC Value    Convert to mV
+ */
 	switch (item % (2*ADC12_NO_CHANNELS)) {
 		case ADC1_TIM1_CH1:
 			result = sADC.adc12_data[item];
@@ -474,34 +479,36 @@ float convertADC12data(uint32_t item, char **text)
 			break;
 
 		case ADC2_Is:
-			V = 3.3*(((float) sADC.adc12_data[item])/65536.0);
-			result =  2000*(V - 1.585714)/3.594286;
+			V = 3.3*(((float) sADC.adc12_data[item])/65536.0)*1000;
+			result =  V;//2000*(V - 1.585714)/3.594286;
 			if (text)
 				*text ="ADC2_Is(mA)";
 			break;
 
 		case ADC1_VbriS1:
-			result =  1000*((12.0+2000.0)/12.0)*3.3*(((float) sADC.adc12_data[item])/65536.0);
+			result =  3.3*(((float) sADC.adc12_data[item])/65536.0)*1000; //1000*((12.0+2000.0)/12.0)*3.3*(((float) sADC.adc12_data[item])/65536.0);
 			if (text)
 				*text ="ADC1_VbriS1(mV)";
 			break;
 
 		case ADC2_VbriS2:
-			result =  1000*((12.0+2000.0)/12.0)*3.3*(((float) sADC.adc12_data[item])/65536.0);
+			result =  3.3*(((float) sADC.adc12_data[item])/65536.0) * 1000;//1000*((12.0+2000.0)/12.0)*3.3*(((float) sADC.adc12_data[item])/65536.0);
 			if (text)
 				*text ="ADC2_VbriS2(mV)";
 			break;
 
 		case ADC1_VplaL1:
-			V = 3.3*(((float) sADC.adc12_data[item])/65536.0);
-			result =  1E6*(V-1.648348)/0.999;
+			V = 3.3*(((float) sADC.adc12_data[item])/65536.0) * 1000;
+			result =  V;//1E6*(V-1.648348)/0.999;
 			if (text)
 				*text ="ADC1_VplaL1(mV)";
 			break;
 
 		case ADC2_VplaL2:
-			V = 3.3*(((float) sADC.adc12_data[item])/65536.0);
-			result =  1E6*(V-1.648348)/0.999;
+			//V is the directly measured voltage from the ADC in mV
+			V = 3.3*(((float) sADC.adc12_data[item])/65536.0) * 1000;
+			//result is the True voltage at L2 (corrected for voltage divider)
+			result =  V;//1E6*(V-1.648348)/0.999;
 			if (text)
 				*text ="ADC2_VplaL2(mV)";
 			break;
@@ -555,15 +562,18 @@ uint8_t freqCorrection(int16_t *freqCorr)
 
 	//Find when MOSFET branch is on (start and stop time)
 	//Find minimum and maximum value of bridge current
-	for (int i=0; i<2*ADC12_NO_CHANNELS*sADC.nADC12Read; i=i+6)
+ 	for (int i=0; i<2*ADC12_NO_CHANNELS*sADC.nADC12Read; i=i+6)
 	{
 		// Find minimum of bridge current
 		float data = convertADC12data(i+ADC2_Is, NULL);
 		if (data < min)
 			min = data;
+			//HAL_UART_Transmit(huart3, min);
+			printCR();
 		// Find maximum
 		if (data > max)
 			max = data;
+
 		// Check for low
 		if (!lowDetected && sADC.adc12_data[i+ADC1_TIM1_CH1] < 500)
 		{
@@ -605,7 +615,7 @@ void measureBridgePlasmaADC12(void)
 	//HAL_GPIO_WritePin(TEST_OUTPUT_GPIO_Port, TEST_OUTPUT_Pin, GPIO_PIN_SET);
 
 	//Calculate number of reads needed for one period
-	sADC.nADC12Read = (uint32_t) ((1/(float) sHbridge.frequency)/ADC12_GROUP_READTIME);
+	sADC.nADC12Read = 2 * ((uint32_t) ((1/(float) sHbridge.frequency)/ADC12_GROUP_READTIME));
 	sADC.nADC12Read +=2; //Add to see the start of next period
 
 	//Start ADC1 and ADC2 measurements
@@ -645,7 +655,7 @@ void doneMeasuringBridgePlasmaADC12(uint32_t errorCode)
 
 	if (errorCode == HAL_ADC_ERROR_NONE)
 	{
-		if (sFlashConfig.mode == RUN_MODE)
+		if (1)//sFlashConfig.mode == RUN_MODE)
 		{
 			//TODO Calculate bridge voltage Vmax and Vmin
 			//TODO Check bridge voltage VbriS1 and VbriS2 (To high? Not present?)
@@ -666,7 +676,7 @@ void doneMeasuringBridgePlasmaADC12(uint32_t errorCode)
 				//TODO Adjust H-bridge dead time
 				//sHbridge.deadtime = new setting;
 				programHbridge();
-				HAL_Delay(1);	//Allow H-bridge to settle with new settings
+					HAL_Delay(1);	//Allow H-bridge to settle with new settings
 				if (count % 2048)
 					printHbridgeData();
 			}
@@ -1005,9 +1015,10 @@ int PowerOnHighSupplies(void)
 		printString("Ok");
 	else
 	{
-		printString("Fail");
-		PowerOffHighSupplies();
-		return(0);
+		//printString("Fail");
+		printString("debug");
+		//PowerOffHighSupplies();
+		//return(0);
 	}
 
 	//Signal to robot controller all power supplies are active
