@@ -567,13 +567,16 @@ uint8_t freqCorrection(int16_t *freqCorr)
 		// Find minimum of bridge current
 		float data = convertADC12data(i+ADC2_Is, NULL);
 		if (data < min)
+		{
 			min = data;
 			//HAL_UART_Transmit(huart3, min);
 			printCR();
+		}
 		// Find maximum
 		if (data > max)
+		{
 			max = data;
-
+		}
 		// Check for low
 		if (!lowDetected && sADC.adc12_data[i+ADC1_TIM1_CH1] < 500)
 		{
