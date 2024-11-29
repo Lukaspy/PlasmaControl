@@ -711,19 +711,26 @@ void doneMeasuringBridgePlasmaADC12(uint32_t errorCode)
 
 // Print H-bridge data on UART3 formatted for CSV datalogging
 // Prints: Hbridge Freq, Deadtime, Is, VplaL1, VplaL2, VbrS1, VbriS2
-
-static void printHbridgeDatalogging(void)
+// Parameter:
+//		startTime: denotes the system time when ADC measurement was started
+static void printHbridgeDatalogging(uint32_t startTime)
 {
 	char s_output[1000];
+	//Convert from ms to sec
+	float startTimeSec = (float) startTime / 1000;
 	for (int i=0; i<2*ADC12_NO_CHANNELS*sADC.nADC12Read; i=i+6)
 		{
+			//calculate time of current measurement (start time + ADC sample rate)
+			//TODO: This is likely not exactly accurate. Better way to record time of measurement accounting for conversion/DMA time?
+			float measTime = startTimeSec + (ADC12_GROUP_READTIME * i);
+
 			float Is = convertADC12data(i+ADC2_Is, NULL);
 			float VplaL1 = convertADC12data(i+ADC1_VplaL1, NULL);
 			float VplaL2 = convertADC12data(i+ADC2_VplaL2, NULL);
 			float VbriS1 = convertADC12data(i+ADC1_VbriS1, NULL);
 			float VbriS2 = convertADC12data(i+ADC2_VbriS2, NULL);
 
-			sprintf(s_output, "%u,%u,%f,%f,%f,%f,%f", sHbridge.frequency, sHbridge.deadtime,Is,VplaL1,VplaL2,VbriS1,VbriS2);
+			sprintf(s_output, "%f,%u,%u,%f,%f,%f,%f,%f", measTime, sHbridge.frequency, sHbridge.deadtime,Is,VplaL1,VplaL2,VbriS1,VbriS2);
 			HAL_UART_Transmit(&huart3, (uint8_t *) s_output, strlen(s_output), 1000);
 			printString("\n");
 		}
@@ -737,10 +744,11 @@ void autoFreqAdj(void)
 
 	//printString("\n\r%Press any key to exit"); //Commented out to allow for automated remote serial control (datalogging)
 
-	printString("Freq (Hz),Deadtime (%),Bridge I,VplaL1,VplaL2,VbriS1,VbriS2");
+	printString("Time(s),Freq (Hz),Deadtime (%),Bridge I,VplaL1,VplaL2,VbriS1,VbriS2");
 	printCR();
 	while (!(HAL_UART_Receive(&huart3, (uint8_t *) &input, 1, 1) == HAL_OK))
 	{
+		uint32_t startTime = HAL_GetTick();
 		measureBridgePlasmaADC12();
 		//Wait until ADC3 reading is done
 		while (sADC.adc12_reading);
@@ -777,7 +785,7 @@ void autoFreqAdj(void)
 		programHbridge();
 
 		//Print current ADC data
-		printHbridgeDatalogging();
+		printHbridgeDatalogging(startTime);
 
 
 	}
