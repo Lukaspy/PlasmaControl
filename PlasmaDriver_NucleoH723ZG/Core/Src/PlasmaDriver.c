@@ -292,8 +292,12 @@ static void printHbridgeData(void)
 	HAL_UART_Transmit(&huart3, (uint8_t *) s_output, strlen(s_output), 1000);
 }
 
+
+
+
+
 // Program TIMER 1 controlling the H-bridge
-static void programHbridge(void)
+static void programHbridge()
 {
 	uint8_t DT, DTG;
 	float tDTS = 1E6/((float) TIMER_BASE_CLOCK);  //Minimum step in usec
@@ -317,8 +321,12 @@ static void programHbridge(void)
 	if (debug == 1)
 	{
 		value_int = ((uint32_t) TIMER_BASE_CLOCK) / timARR;
-		sprintf(s_output, "\n\rSet frequency (Hz): %lu\n\r", value_int);
-		printString(s_output);
+
+
+		//TODO: Possibly have silent option for this function to hide/show hbridge data
+
+		//sprintf(s_output, "\n\rSet frequency (Hz): %lu\n\r", value_int);
+		//printString(s_output);
 	}
 
 
@@ -430,8 +438,10 @@ static void programHbridge(void)
 			calcDT = (32 + (DTG & 0x1F))*16*tDTS;
 		}
 		value_int = (uint32_t) 1000*calcDT;
-		sprintf(s_output, "\n\rSet dead time: %lu (ns)\n\r", value_int);
-		printString(s_output);
+
+		//TODO: Possibly have silent option for this function to hide/show hbridge data
+		//sprintf(s_output, "\n\rSet dead time: %lu (ns)\n\r", value_int);
+		//printString(s_output);
 	}
 
 	//Start driving the H-bridge
@@ -570,7 +580,7 @@ uint8_t freqCorrection(int16_t *freqCorr)
 		{
 			min = data;
 			//HAL_UART_Transmit(huart3, min);
-			printCR();
+			//printCR();
 		}
 		// Find maximum
 		if (data > max)
@@ -697,13 +707,38 @@ void doneMeasuringBridgePlasmaADC12(uint32_t errorCode)
 	//HAL_GPIO_WritePin(TEST_OUTPUT_GPIO_Port, TEST_OUTPUT_Pin, GPIO_PIN_RESET);
 }
 
+
+
+// Print H-bridge data on UART3 formatted for CSV datalogging
+// Prints: Hbridge Freq, Deadtime, Is, VplaL1, VplaL2, VbrS1, VbriS2
+
+static void printHbridgeDatalogging(void)
+{
+	char s_output[1000];
+	for (int i=0; i<2*ADC12_NO_CHANNELS*sADC.nADC12Read; i=i+6)
+		{
+			float Is = convertADC12data(i+ADC2_Is, NULL);
+			float VplaL1 = convertADC12data(i+ADC1_VplaL1, NULL);
+			float VplaL2 = convertADC12data(i+ADC2_VplaL2, NULL);
+			float VbriS1 = convertADC12data(i+ADC1_VbriS1, NULL);
+			float VbriS2 = convertADC12data(i+ADC2_VbriS2, NULL);
+
+			sprintf(s_output, "%u,%u,%f,%f,%f,%f,%f", sHbridge.frequency, sHbridge.deadtime,Is,VplaL1,VplaL2,VbriS1,VbriS2);
+			HAL_UART_Transmit(&huart3, (uint8_t *) s_output, strlen(s_output), 1000);
+			printString("\n");
+		}
+}
+
 // Automatically Correct the Drive Frequency until user presses any key
 void autoFreqAdj(void)
 {
 	char input;
 
-	printString("\n\r%Press any key to exit");
 
+	//printString("\n\r%Press any key to exit"); //Commented out to allow for automated remote serial control (datalogging)
+
+	printString("Freq (Hz),Deadtime (%),Bridge I,VplaL1,VplaL2,VbriS1,VbriS2");
+	//printCR();
 	while (!(HAL_UART_Receive(&huart3, (uint8_t *) &input, 1, 1) == HAL_OK))
 	{
 		measureBridgePlasmaADC12();
@@ -711,24 +746,25 @@ void autoFreqAdj(void)
 		while (sADC.adc12_reading);
 		//printADC12data();
 
+		//Calculate delta f
 		int16_t freqCorr;
 		freqCorrection(&freqCorr);
 
-		char text[100];
-		sprintf(text, "\n\rFrequency correction: %i", (int) freqCorr);
-		printString(text);
+		//char text[100];
+		//sprintf(text, "\n\rFrequency correction: %i", (int) freqCorr);
+		//printString(text);
 
 		if (sHbridge.frequency + freqCorr > MAX_FREQUENCY) //GetUint16Input(&sHbridge.frequency, 1, MIN_FREQUENCY, MAX_FREQUENCY))
 		{   // Calculated freq is higher than max
 
-			sprintf(text, "\n\r%i is higher than max freq", (int) sHbridge.frequency + freqCorr);
-			printString(text);
+			//sprintf(text, "\n\r%i is higher than max freq", (int) sHbridge.frequency + freqCorr);
+			//printString(text);
 			sHbridge.frequency = MAX_FREQUENCY;
 		}
 		else if (sHbridge.frequency + freqCorr < MIN_FREQUENCY)
 		{
-			sprintf(text, "\n\r%i is lower than min freq", (int) sHbridge.frequency + freqCorr);
-			printString(text);
+			//sprintf(text, "\n\r%i is lower than min freq", (int) sHbridge.frequency + freqCorr);
+			//printString(text);
 
 			sHbridge.frequency = MIN_FREQUENCY;
 
@@ -739,7 +775,11 @@ void autoFreqAdj(void)
 		}
 
 		programHbridge();
-		printHbridgeData();
+
+		//Print current ADC data
+		printHbridgeDatalogging();
+
+
 	}
 }
 
