@@ -738,7 +738,7 @@ void autoFreqAdj(void)
 	//printString("\n\r%Press any key to exit"); //Commented out to allow for automated remote serial control (datalogging)
 
 	printString("Freq (Hz),Deadtime (%),Bridge I,VplaL1,VplaL2,VbriS1,VbriS2");
-	//printCR();
+	printCR();
 	while (!(HAL_UART_Receive(&huart3, (uint8_t *) &input, 1, 1) == HAL_OK))
 	{
 		measureBridgePlasmaADC12();
