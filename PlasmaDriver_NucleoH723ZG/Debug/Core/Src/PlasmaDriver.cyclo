@@ -12,7 +12,7 @@
 ../Core/Src/PlasmaDriver.c:521:6:printADC12data	4
 ../Core/Src/PlasmaDriver.c:552:9:freqCorrection	13
 ../Core/Src/PlasmaDriver.c:616:6:measureBridgePlasmaADC12	3
-../Core/Src/PlasmaDriver.c:648:6:doneMeasuringBridgePlasmaADC12	6
+../Core/Src/PlasmaDriver.c:648:6:doneMeasuringBridgePlasmaADC12	7
 ../Core/Src/PlasmaDriver.c:701:6:autoFreqAdj	5
 ../Core/Src/PlasmaDriver.c:747:7:convertADC3data	12
 ../Core/Src/PlasmaDriver.c:802:6:printADC3data	3

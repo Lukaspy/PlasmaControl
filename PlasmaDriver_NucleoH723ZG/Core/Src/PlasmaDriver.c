@@ -480,26 +480,26 @@ float convertADC12data(uint32_t item, char **text)
 
 		case ADC2_Is:
 			V = 3.3*(((float) sADC.adc12_data[item])/65536.0)*1000;
-			result =  V;//2000*(V - 1.585714)/3.594286;
+			result =  2000*(V - 1.585714)/3.594286; //V;
 			if (text)
 				*text ="ADC2_Is(mA)";
 			break;
 
 		case ADC1_VbriS1:
-			result =  3.3*(((float) sADC.adc12_data[item])/65536.0)*1000; //1000*((12.0+2000.0)/12.0)*3.3*(((float) sADC.adc12_data[item])/65536.0);
+			result =  1000*((12.0+2000.0)/12.0)*3.3*(((float) sADC.adc12_data[item])/65536.0); // 3.3*(((float) sADC.adc12_data[item])/65536.0)*1000;
 			if (text)
 				*text ="ADC1_VbriS1(mV)";
 			break;
 
 		case ADC2_VbriS2:
-			result =  3.3*(((float) sADC.adc12_data[item])/65536.0) * 1000;//1000*((12.0+2000.0)/12.0)*3.3*(((float) sADC.adc12_data[item])/65536.0);
+			result =  1000*((12.0+2000.0)/12.0)*3.3*(((float) sADC.adc12_data[item])/65536.0); //3.3*(((float) sADC.adc12_data[item])/65536.0) * 1000;
 			if (text)
 				*text ="ADC2_VbriS2(mV)";
 			break;
 
 		case ADC1_VplaL1:
 			V = 3.3*(((float) sADC.adc12_data[item])/65536.0) * 1000;
-			result =  V;//1E6*(V-1.648348)/0.999;
+			result =  1E6*(V-1.648348)/0.999; //V;//
 			if (text)
 				*text ="ADC1_VplaL1(mV)";
 			break;
@@ -658,7 +658,7 @@ void doneMeasuringBridgePlasmaADC12(uint32_t errorCode)
 
 	if (errorCode == HAL_ADC_ERROR_NONE)
 	{
-		if (1)//sFlashConfig.mode == RUN_MODE)
+		if (sFlashConfig.mode == RUN_MODE)
 		{
 			//TODO Calculate bridge voltage Vmax and Vmin
 			//TODO Check bridge voltage VbriS1 and VbriS2 (To high? Not present?)
@@ -697,7 +697,7 @@ void doneMeasuringBridgePlasmaADC12(uint32_t errorCode)
 	//HAL_GPIO_WritePin(TEST_OUTPUT_GPIO_Port, TEST_OUTPUT_Pin, GPIO_PIN_RESET);
 }
 
-// Automatically Correct the Drive Frequency until user presses 'q'
+// Automatically Correct the Drive Frequency until user presses any key
 void autoFreqAdj(void)
 {
 	char input;
