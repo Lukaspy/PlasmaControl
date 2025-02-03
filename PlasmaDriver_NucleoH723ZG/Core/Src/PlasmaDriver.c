@@ -17,6 +17,7 @@ extern TIM_HandleTypeDef htim1;
 extern ADC_HandleTypeDef hadc1;
 extern ADC_HandleTypeDef hadc2;
 extern ADC_HandleTypeDef hadc3;
+extern TIM_HandleTypeDef htim24;
 
 #define MAX_INPUT 20
 
@@ -621,6 +622,74 @@ uint8_t freqCorrection(int16_t *freqCorr)
 }
 
 
+//Calculate voltage correction
+//Returns 1 if a valid frequency correction is calculated, otherwise 0
+uint8_t voltageCorrection(int16_t *vCorr)
+{
+
+	//TODO: finish voltage correction implementation
+
+
+//	int start_index=0;
+//	int stop_index=0;
+//	int number_of_lows=0;
+//	int lowDetected = 0;
+//	int highDetected = 0;
+//	float min = 100000;
+//	float max = -100000;
+//	float norm = 0;
+//
+//	//Find when MOSFET branch is on (start and stop time)
+//	//Find minimum and maximum value of bridge current
+// 	for (int i=0; i<2*ADC12_NO_CHANNELS*sADC.nADC12Read; i=i+6)
+//	{
+//		// Find minimum of bridge current
+//		float data = convertADC12data(i+ADC2_Is, NULL);
+//		if (data < min)
+//		{
+//			min = data;
+//			//HAL_UART_Transmit(huart3, min);
+//			//printCR();
+//		}
+//		// Find maximum
+//		if (data > max)
+//		{
+//			max = data;
+//		}
+//		// Check for low
+//		if (!lowDetected && sADC.adc12_data[i+ADC1_TIM1_CH1] < 500)
+//		{
+//			//First low detected
+//			start_index = i; 		// Store index of first low detected
+//			lowDetected = 1;
+//		}
+//		//Check for high
+//		if (!highDetected && lowDetected && sADC.adc12_data[i+ADC1_TIM1_CH1] > 65000)
+//		{
+//			//High after first low detected
+//			stop_index = i-6;		// Store index of last low
+//			highDetected = 1;
+//		}
+//	}
+//
+//	// Check maximum and minimum difference
+//	norm = max - min;
+//	if (norm < 10)
+//		norm = max;
+//
+//	number_of_lows = (stop_index - start_index)/6 + 1;
+//	if (lowDetected && highDetected && (number_of_lows >= 5))
+//	{
+//		float upper = convertADC12data(start_index+ADC2_Is+6, NULL);
+//		float lower = convertADC12data(stop_index+ADC2_Is-6, NULL);
+//		*freqCorr = (int16_t) 1000*(upper - lower)/norm;
+//		return(1);
+//	}
+//	else
+//		return(0);
+}
+
+
 // Measure bridge current, plasma voltage, and bridge current using ADC1 and ADC2 for one period
 // After the measurement is done the function doneMeasuringBridgePlasmaADC12 is called
 void measureBridgePlasmaADC12(void)
@@ -628,7 +697,7 @@ void measureBridgePlasmaADC12(void)
 	//HAL_GPIO_WritePin(TEST_OUTPUT_GPIO_Port, TEST_OUTPUT_Pin, GPIO_PIN_SET);
 
 	//Calculate number of reads needed for one period
-	sADC.nADC12Read = 2 * ((uint32_t) ((1/(float) sHbridge.frequency)/ADC12_GROUP_READTIME));
+	sADC.nADC12Read = 2 * 2 * ((uint32_t) ((1/(float) sHbridge.frequency)/ADC12_GROUP_READTIME));
 	sADC.nADC12Read +=2; //Add to see the start of next period
 
 	//Start ADC1 and ADC2 measurements
@@ -713,16 +782,18 @@ void doneMeasuringBridgePlasmaADC12(uint32_t errorCode)
 // Prints: Hbridge Freq, Deadtime, Is, VplaL1, VplaL2, VbrS1, VbriS2
 // Parameter:
 //		startTime: denotes the system time when ADC measurement was started
-static void printHbridgeDatalogging(uint32_t startTime)
+static void printHbridgeDatalogging(uint32_t startTime, uint32_t stopTime)
 {
 	char s_output[1000];
-	//Convert from ms to sec
-	float startTimeSec = (float) startTime / 1000;
+	//Convert from ms to sec: time elapsed / number of adc reads
+	//This assumes that the time taken for each adc read is approx. equal
+	double interval = (double) (stopTime - startTime) / (double) sADC.nADC12Read;
+
 	for (int i=0; i<2*ADC12_NO_CHANNELS*sADC.nADC12Read; i=i+6)
 		{
 			//calculate time of current measurement (start time + ADC sample rate)
 			//TODO: This is likely not exactly accurate. Better way to record time of measurement accounting for conversion/DMA time?
-			float measTime = startTimeSec + (ADC12_GROUP_READTIME * i);
+			double measTime = startTime + (interval * i);
 
 			float Is = convertADC12data(i+ADC2_Is, NULL);
 			float VplaL1 = convertADC12data(i+ADC1_VplaL1, NULL);
@@ -730,7 +801,7 @@ static void printHbridgeDatalogging(uint32_t startTime)
 			float VbriS1 = convertADC12data(i+ADC1_VbriS1, NULL);
 			float VbriS2 = convertADC12data(i+ADC2_VbriS2, NULL);
 
-			sprintf(s_output, "%f,%u,%u,%f,%f,%f,%f,%f", measTime, sHbridge.frequency, sHbridge.deadtime,Is,VplaL1,VplaL2,VbriS1,VbriS2);
+			sprintf(s_output, "%.2lf,%u,%u,%f,%f,%f,%f,%f", measTime, sHbridge.frequency, sHbridge.deadtime,Is,VplaL1,VplaL2,VbriS1,VbriS2);
 			HAL_UART_Transmit(&huart3, (uint8_t *) s_output, strlen(s_output), 1000);
 			printString("\n");
 		}
@@ -744,14 +815,20 @@ void autoFreqAdj(void)
 
 	//printString("\n\r%Press any key to exit"); //Commented out to allow for automated remote serial control (datalogging)
 
-	printString("Time(s),Freq (Hz),Deadtime (%),Bridge I,VplaL1,VplaL2,VbriS1,VbriS2");
+	printString("Time(us),Freq (Hz),Deadtime (%),Bridge I,VplaL1,VplaL2,VbriS1,VbriS2");
 	printCR();
+
+	//Start timer24 which is used to time when each ADC measurement is captured
+	HAL_TIM_Base_Start(&htim24);
+
+
 	while (!(HAL_UART_Receive(&huart3, (uint8_t *) &input, 1, 1) == HAL_OK))
 	{
-		uint32_t startTime = HAL_GetTick();
+		uint32_t startTime = __HAL_TIM_GET_COUNTER(&htim24);//TIM24->CNT;
 		measureBridgePlasmaADC12();
 		//Wait until ADC3 reading is done
 		while (sADC.adc12_reading);
+		uint32_t stopTime = __HAL_TIM_GET_COUNTER(&htim24);//TIM24->CNT;
 		//printADC12data();
 
 		//Calculate delta f
@@ -785,7 +862,7 @@ void autoFreqAdj(void)
 		programHbridge();
 
 		//Print current ADC data
-		printHbridgeDatalogging(startTime);
+		printHbridgeDatalogging(startTime, stopTime);
 
 
 	}
@@ -988,6 +1065,7 @@ void HAL_ADC_ErrorCallback(ADC_HandleTypeDef* hadc)
 // ADC conversion and DMA transfer complete
 void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 {
+
 	// ADC1 is master and ADC2 is slave
 	if (hadc->Instance == ADC1)
 	{
