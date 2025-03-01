@@ -25,7 +25,7 @@ extern TIM_HandleTypeDef htim24;
 static uint16_t debug = 1;
 
 // *** Menu table ***
-#define MAX_MENU_SIZE 13
+#define MAX_MENU_SIZE 14
 static char *menu[MAX_MENU_SIZE];
 static uint16_t menu_size;
 #define CONFIG_MENU_SIZE 2
@@ -519,7 +519,7 @@ float convertADC12data(uint32_t item, char **text)
 			//V is the directly measured voltage from the ADC in mV
 			V = 3.3*(((float) sADC.adc12_data[item])/65536.0) * 1000;
 			//result is the True voltage at L2 (corrected for voltage divider)
-			result =  V;//1E6*(V-1.648348)/0.999;
+			result =  1E6*(V-1.648348)/0.999;
 			if (text)
 				*text ="ADC2_VplaL2(mV)";
 			break;
@@ -622,71 +622,27 @@ uint8_t freqCorrection(int16_t *freqCorr)
 }
 
 
-//Calculate voltage correction
+//Calculate voltage correction base on a desired RMS voltage
 //Returns 1 if a valid frequency correction is calculated, otherwise 0
-uint8_t voltageCorrection(int16_t *vCorr)
+uint8_t voltageCorrection(int16_t Vdesired, int16_t *vCorr)
 {
+	float max = -100000;
 
-	//TODO: finish voltage correction implementation
-
-
-//	int start_index=0;
-//	int stop_index=0;
-//	int number_of_lows=0;
-//	int lowDetected = 0;
-//	int highDetected = 0;
-//	float min = 100000;
-//	float max = -100000;
-//	float norm = 0;
-//
-//	//Find when MOSFET branch is on (start and stop time)
-//	//Find minimum and maximum value of bridge current
-// 	for (int i=0; i<2*ADC12_NO_CHANNELS*sADC.nADC12Read; i=i+6)
-//	{
-//		// Find minimum of bridge current
-//		float data = convertADC12data(i+ADC2_Is, NULL);
-//		if (data < min)
-//		{
-//			min = data;
-//			//HAL_UART_Transmit(huart3, min);
-//			//printCR();
-//		}
-//		// Find maximum
-//		if (data > max)
-//		{
-//			max = data;
-//		}
-//		// Check for low
-//		if (!lowDetected && sADC.adc12_data[i+ADC1_TIM1_CH1] < 500)
-//		{
-//			//First low detected
-//			start_index = i; 		// Store index of first low detected
-//			lowDetected = 1;
-//		}
-//		//Check for high
-//		if (!highDetected && lowDetected && sADC.adc12_data[i+ADC1_TIM1_CH1] > 65000)
-//		{
-//			//High after first low detected
-//			stop_index = i-6;		// Store index of last low
-//			highDetected = 1;
-//		}
-//	}
-//
-//	// Check maximum and minimum difference
-//	norm = max - min;
-//	if (norm < 10)
-//		norm = max;
-//
-//	number_of_lows = (stop_index - start_index)/6 + 1;
-//	if (lowDetected && highDetected && (number_of_lows >= 5))
-//	{
-//		float upper = convertADC12data(start_index+ADC2_Is+6, NULL);
-//		float lower = convertADC12data(stop_index+ADC2_Is-6, NULL);
-//		*freqCorr = (int16_t) 1000*(upper - lower)/norm;
-//		return(1);
-//	}
-//	else
-//		return(0);
+	//Find maximum value of bridge voltage
+	for (int i=0; i<2*ADC12_NO_CHANNELS*sADC.nADC12Read; i=i+6)
+	{
+		// Find minimum of bridge current
+		float VL1 = convertADC12data(i+ADC1_VplaL1, NULL);
+		float VL2 = convertADC12data(i+ADC2_VplaL2, NULL);
+		float VL = VL1 - VL2;
+		VL = sqrt(2) * VL;
+		if (VL > max)
+		{
+			max = VL;
+		}
+	}
+	*vCorr = (int16_t) (Vdesired-max)/100;
+	return 1;
 }
 
 
@@ -697,7 +653,7 @@ void measureBridgePlasmaADC12(void)
 	//HAL_GPIO_WritePin(TEST_OUTPUT_GPIO_Port, TEST_OUTPUT_Pin, GPIO_PIN_SET);
 
 	//Calculate number of reads needed for one period
-	sADC.nADC12Read = 2 * 2 * ((uint32_t) ((1/(float) sHbridge.frequency)/ADC12_GROUP_READTIME));
+	sADC.nADC12Read = ((uint32_t) ((1/(float) sHbridge.frequency)/ADC12_GROUP_READTIME));//* 2; //Multiplied by two to grab two periods
 	sADC.nADC12Read +=2; //Add to see the start of next period
 
 	//Start ADC1 and ADC2 measurements
@@ -867,6 +823,68 @@ void autoFreqAdj(void)
 
 	}
 }
+
+
+void autoVoltageAdj(int16_t userVoltage)
+{
+	char input;
+
+
+	//printString("\n\r%Press any key to exit"); //Commented out to allow for automated remote serial control (datalogging)
+
+	printString("Time(us),Freq (Hz),Deadtime (%),Bridge I,VplaL1,VplaL2,VbriS1,VbriS2");
+	printCR();
+
+	//Start timer24 which is used to time when each ADC measurement is captured
+	HAL_TIM_Base_Start(&htim24);
+
+
+	while (!(HAL_UART_Receive(&huart3, (uint8_t *) &input, 1, 1) == HAL_OK))
+	{
+		uint32_t startTime = __HAL_TIM_GET_COUNTER(&htim24);//TIM24->CNT;
+		measureBridgePlasmaADC12();
+		//Wait until ADC3 reading is done
+		while (sADC.adc12_reading);
+		uint32_t stopTime = __HAL_TIM_GET_COUNTER(&htim24);//TIM24->CNT;
+		//printADC12data();
+
+		//Calculate delta f
+		int16_t voltageCorr;
+		voltageCorrection(userVoltage, &voltageCorr);
+
+		//char text[100];
+		//sprintf(text, "\n\rFrequency correction: %i", (int) freqCorr);
+		//printString(text);
+
+		if (sHbridge.deadtime + voltageCorr > MAX_DEADTIME) //GetUint16Input(&sHbridge.frequency, 1, MIN_FREQUENCY, MAX_FREQUENCY))
+		{   // Calculated freq is higher than max
+
+			//sprintf(text, "\n\r%i is higher than max freq", (int) sHbridge.frequency + freqCorr);
+			//printString(text);
+			sHbridge.deadtime = MAX_DEADTIME;
+		}
+		else if (sHbridge.deadtime + voltageCorr < MIN_DEADTIME)
+		{
+			//sprintf(text, "\n\r%i is lower than min freq", (int) sHbridge.frequency + freqCorr);
+			//printString(text);
+
+			sHbridge.deadtime = MIN_DEADTIME;
+
+		}
+		else
+		{
+			sHbridge.deadtime = sHbridge.deadtime + voltageCorr;
+		}
+
+		programHbridge();
+
+		//Print current ADC data
+		printHbridgeDatalogging(startTime, stopTime);
+
+
+	}
+}
+
 
 //Convert ADC3 data to voltages
 float convertADC3data(uint32_t item, char **text)
@@ -1254,6 +1272,7 @@ static void InitializeMenu(void)
 		menu[item++] = "   c: Show/Change configuration";
 		menu[item++] = "   t: Test GPIO";
 		menu[item++] = "   y: Auto Frequency Adjustment";
+		menu[item++] = "   u: Auto Voltage Adjustment";
 	}
 	else if ((sFlashConfig.mode == RUN_MODE))
 	{
@@ -1499,6 +1518,15 @@ static void TestModeAction(char input)
 
 		case 'y': //Auto Freq Adjust
 			autoFreqAdj();
+			break;
+		case 'u': //Auto Freq Adjust
+			printString("Desired Voltage: ");
+			uint16_t userVoltage;
+			//Max and min valid voltages
+			if (GetUint16Input(&userVoltage, 1, 0, 5000))
+			{   // Data entry valid
+				autoVoltageAdj(userVoltage);
+			}
 			break;
 	}
 }

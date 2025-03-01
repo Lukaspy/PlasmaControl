@@ -4,7 +4,7 @@ import serial
 import sys
 import time
 
-ser = serial.Serial('/dev/ttyACM0', 115200, timeout=0.1)
+ser = serial.Serial('/dev/ttyACM0', 8593750, timeout=0.1)
 
 #Check if device is connected
 ser.write(b"\r")
