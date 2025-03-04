@@ -1,0 +1,2 @@
+class PlasmaException(Exception):
+    pass

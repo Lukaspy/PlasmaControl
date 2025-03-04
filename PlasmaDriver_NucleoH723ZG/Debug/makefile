@@ -61,7 +61,7 @@ main-build: PlasmaDriver_NucleoH723ZG.elf secondary-outputs
 
 # Tool invocations
 PlasmaDriver_NucleoH723ZG.elf PlasmaDriver_NucleoH723ZG.map: $(OBJS) $(USER_OBJS) /home/lukas/git/PlasmaControl/PlasmaDriver_NucleoH723ZG/STM32H723ZGTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "PlasmaDriver_NucleoH723ZG.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m7 -T"/home/lukas/git/PlasmaControl/PlasmaDriver_NucleoH723ZG/STM32H723ZGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="PlasmaDriver_NucleoH723ZG.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv5-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+	arm-none-eabi-gcc -o "PlasmaDriver_NucleoH723ZG.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m7 -T"/home/lukas/git/PlasmaControl/PlasmaDriver_NucleoH723ZG/STM32H723ZGTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="PlasmaDriver_NucleoH723ZG.map" -Wl,--gc-sections -static -u _printf_float --specs=nano.specs -mfpu=fpv5-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
