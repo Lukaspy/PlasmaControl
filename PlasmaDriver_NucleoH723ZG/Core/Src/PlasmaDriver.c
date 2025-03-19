@@ -1166,8 +1166,12 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
 }
 
 //Power Off Supplies in order3.3V switch and 15V
-void PowerOffLowSupplies(void)
+/**
+ * returns 1 if power off unsuccessful. 0 on success
+ */
+char PowerOffLowSupplies(void)
 {
+	char status;
 	if (powerStatus == V500_OFF)
 	{
 		//Power off 3.3V switch voltage
@@ -1179,18 +1183,25 @@ void PowerOffLowSupplies(void)
 		HAL_GPIO_WritePin(OUT_15V_ENABLE_GPIO_Port, OUT_15V_ENABLE_Pin, GPIO_PIN_SET);		//There is an inverter between MCU and the output, thus SET
 		supply_status.s15V = 0;
 		HAL_Delay(1);	//Wait 1msec  TODO - Might need to be changed
+		status = 0;
 	}
 	else
 	{
 		printString("** ERROR ** PowerOffLowSupplies: 500V is On\n\r");
 		printCR();
+		status = 1;
 	}
+	return status;
 }
 
 
 //Power Off Supply 500V
-void PowerOffHighSupplies(void)
+/**
+ * Returns 1 if power off unsuccessful. 0 on success
+ */
+char PowerOffHighSupplies(void)
 {
+	char status;
 	//Make sure the H-bridge outputs are zero before turning off power
 	stopHbridge();
 
@@ -1207,6 +1218,7 @@ void PowerOffHighSupplies(void)
 
 	powerStatus = V500_OFF;
 	supply_status.sHV = 0;
+	return 0;
 }
 
 void PowerOffSupplies(void)
@@ -1667,7 +1679,25 @@ static void querySupply(char *input) {
  * status of the supply via a char = {0, 1}
  */
 static char toggleSupply(char *input) {
+	char status;
+	if (strcmp(input, "lv") == 0)
+	{
+		if (supply_status.s3_3V) {
+			status = PowerOffLowSupplies();
+		} else {
+			status = PowerOnLowSupplies();
+		}
 
+	} else if (strcmp(input, "hv") == 0) {
+		if (supply_status.sHV) {
+			status = PowerOffHighSupplies();
+		} else {
+			status = PowerOnHighSupplies();
+		}
+
+	}
+
+	return status;
 }
 
 
@@ -1700,7 +1730,11 @@ static void remoteControl()
 						querySupply(input);
 					} else if (input[1] ==  '!')
 					{
-						toggleSupply(input);
+						if (toggleSupply(input)) {
+							printString("on");
+						} else {
+							printString("off");
+						}
 					}
 					break;
 
