@@ -1725,12 +1725,16 @@ static void remoteControl()
 
 				//power supply related query/command
 				case 'p':
+					char supply[3];
+					supply[0] = input[1];
+					supply[1] = input[2];
+					supply[2] = input[3];
 					if (input[1] == '?')
 					{
-						querySupply(input);
+						querySupply(supply);
 					} else if (input[1] ==  '!')
 					{
-						if (toggleSupply(input)) {
+						if (toggleSupply(supply)) {
 							printString("on");
 						} else {
 							printString("off");
