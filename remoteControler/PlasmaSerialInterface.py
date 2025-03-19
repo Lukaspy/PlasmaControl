@@ -18,10 +18,12 @@ class PlasmaSerialInterface:
         """Initializes communication with the microcontroller. Returns True if 
         device is connected, False otherwise"""
         self.ser = serial.Serial(self.serial_port, self.baud_rate, self.timeout)
-        self._send("rc")
+        self.ser.reset_input_buffer()
+
+        self._send("~")
         data = self.ser.readline()
 
-        if not data:
+       if not data:
             return False
         
         self.initialized = True

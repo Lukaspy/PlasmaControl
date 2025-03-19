@@ -3,6 +3,8 @@
  *
  *  Created on: Jan 30, 2023
  *      Author: Nicole Brown
+ *
+ *  Expanded by Lukas Crockett 2024-2025
  */
 
 #include "main.h"
@@ -10,6 +12,7 @@
 #include "stdlib.h"
 #include "stdio.h"
 #include "stm32h7xx_hal.h"
+
 
 //External handles
 extern UART_HandleTypeDef huart3;
@@ -105,6 +108,25 @@ typedef struct
 	volatile uint16_t adc12_reading;		//Set to 1 when ADC1 and ADC2 starts reading and to 0 when it is done (interrupt)
 } ADC_t;
 static ADC_t sADC;
+
+/**
+ * stores the status of all power supplies
+ * in char values of 0 or 1
+ */
+typedef struct
+{
+	char s3_3V;
+	char s15V;
+	char sHV;
+} supply_struct;
+static supply_struct supply_status;
+
+static void init_supply_struct()
+{
+	supply_status.s15V = 0;
+	supply_status.s3_3V = 0;
+	supply_status.sHV = 0;
+}
 
 //ADC3 Threshold data (TODO This should be part of flash memory)
 uint16_t sADC3threshold[] = {3252,	// Vbat:   48V*9.76k/(9.76k+169k) = 2.62V, 2.62V/3.3V*4096 = 3252
@@ -1067,6 +1089,47 @@ static uint8_t GetUint16Input(uint16_t *input, uint8_t bValidate, uint16_t min, 
 	return(result);
 }
 
+// Get an integer number from UART3. If the number is valid, the function returns 1, otherwise 0.
+//static uint8_t GetStringInput(char *input)
+//{
+//	char input;
+//	char s_input[MAX_INPUT];
+//	int pos = 0;
+//	//Wait for user input
+//	HAL_UART_Receive(&huart3, (uint8_t *) &input, 1, 100000);
+//	while (input != 13)
+//	{
+//		// Backspace?
+//		if ((input == 127) && (pos > 0))
+//		{
+//			// Delete digit
+//			HAL_UART_Transmit(&huart3, (uint8_t *) &input, 1, 1000);
+//			pos--;
+//		}
+//		// A digit?
+//		else
+//		{
+//			// Echo char and store it
+//			HAL_UART_Transmit(&huart3, (uint8_t *) &input, 1, 1000);
+//			s_input[pos++] = input;
+//		}
+//
+//		// Get next character
+//		if (pos < MAX_INPUT-1)
+//		{
+//			HAL_UART_Receive(&huart3, (uint8_t *) &input, 1, 100000);
+//		}
+//		else
+//		{
+//			input = 13; // Terminate while loop
+//		}
+//	}
+//	s_input[pos] = 0;
+//	if (pos > 0)
+//		*number = atoi(s_input);
+//	return(pos > 0);
+//}
+
 void HAL_ADC_ErrorCallback(ADC_HandleTypeDef* hadc)
 {
 	// ADC1 is master and ADC2 is slave
@@ -1109,10 +1172,12 @@ void PowerOffLowSupplies(void)
 	{
 		//Power off 3.3V switch voltage
 		HAL_GPIO_WritePin(OUT_3V3_SWITCH_GPIO_Port, OUT_3V3_SWITCH_Pin, GPIO_PIN_SET);
+		supply_status.s3_3V = 0;
 		HAL_Delay(1);	//Wait 1msec  TODO - Might need to be changed
 
 		//Power off 15V
 		HAL_GPIO_WritePin(OUT_15V_ENABLE_GPIO_Port, OUT_15V_ENABLE_Pin, GPIO_PIN_SET);		//There is an inverter between MCU and the output, thus SET
+		supply_status.s15V = 0;
 		HAL_Delay(1);	//Wait 1msec  TODO - Might need to be changed
 	}
 	else
@@ -1141,6 +1206,7 @@ void PowerOffHighSupplies(void)
 	HAL_GPIO_WritePin(LED_ACTIVE_GPIO_Port, LED_ACTIVE_Pin, GPIO_PIN_SET);			//There is an inverter between MCU and the output, thus SET
 
 	powerStatus = V500_OFF;
+	supply_status.sHV = 0;
 }
 
 void PowerOffSupplies(void)
@@ -1166,7 +1232,10 @@ int PowerOnLowSupplies(void)
 
 	//Check 15V voltage
 	if (sADC.adc3_data[ADC3_15V] >= sADC3threshold[ADC3_15V])
+	{
 		printString("Ok");
+		supply_status.s15V = 1;
+	}
 	else
 	{
 		printString("Fail");
@@ -1205,7 +1274,10 @@ int PowerOnHighSupplies(void)
 
 	//Check 500V voltage
 	if (sADC.adc3_data[ADC3_500VDC] >= sADC3threshold[ADC3_500VDC])
+	{
 		printString("Ok");
+		supply_status.sHV = 1;
+	}
 	else
 	{
 		//printString("Fail");
@@ -1221,6 +1293,7 @@ int PowerOnHighSupplies(void)
 
 	return(1);
 }
+
 
 // GPIO interrupt handler
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
@@ -1531,6 +1604,131 @@ static void TestModeAction(char input)
 	}
 }
 
+
+/**
+ * Stores variables describing the current state of
+ * the remote control state machine. chars are used to
+ * store a 0 or 1, denoting a boolean value
+ */
+struct rc_state {
+	char idle;
+};
+typedef struct rc_state rc_state;
+
+/**
+ * Creates and returns an initialized rc_state
+ */
+static rc_state init_rc_state() {
+	rc_state ret_state;
+	ret_state.idle = 1;
+
+	return ret_state;
+}
+
+
+/**
+ * Print a string to UART acknowledging remote control
+ */
+static void init_rc() {
+	printString("~");
+}
+
+/**
+ * Checks status of queried power supply. Prints status to UART
+ */
+static void querySupply(char *input) {
+	if (strcmp(input, "15") == 0)
+	{
+		if (supply_status.s15V) {
+			printString("on");
+		} else {
+			printString("off");
+		}
+
+	} else if (strcmp(input, "3.3") == 0) {
+		if (supply_status.s3_3V) {
+			printString("on");
+		} else {
+			printString("off");
+		}
+
+	} else if (strcmp(input, "hv") == 0) {
+		if (supply_status.sHV) {
+			printString("on");
+		} else {
+			printString("off");
+		}
+
+	}
+}
+
+/**
+ * Toggles the specified supply, returns the new
+ * status of the supply via a char = {0, 1}
+ */
+static char toggleSupply(char *input) {
+
+}
+
+
+/**
+ * This routine is entered when the remote control signal is received
+ * handles datalogging and accepting control commands from uart
+ */
+static void remoteControl()
+{
+	rc_state current_state = init_rc_state();
+
+	while (1)
+	{
+		char input[100];
+
+		//Check for input and update state accordingly
+		if (HAL_UART_Receive(&huart3, (uint8_t *) &input, 1, 1) == HAL_OK)
+		{
+			switch (input[0])
+			{
+				//Initialization Query
+				case '~':
+					init_rc();
+					break;
+
+				//power supply related query/command
+				case 'p':
+					if (input[1] == '?')
+					{
+						querySupply(input);
+					} else if (input[1] ==  '!')
+					{
+						toggleSupply(input);
+					}
+					break;
+
+				//start plasma related command
+				case 's':
+
+					break;
+			}
+
+		}
+
+		//Act on current state
+
+
+	}
+
+}
+
+
+
+
+
+
+
+
+
+
+
 // Print the plasma driver menu on UART3, and execute entered command.
 static void PlasmaDriverMenu(void)
 {
@@ -1549,6 +1747,12 @@ static void PlasmaDriverMenu(void)
 			}
 			printCR();
 		}
+		//'~' sent by gui program to signify remote control
+		else if (input == '~')
+		{
+			remoteControl();
+		}
+		//Test mode action
 		else
 		{
 			if (sFlashConfig.mode == TEST_MODE)
@@ -1564,6 +1768,9 @@ static void PlasmaDriverMenu(void)
 // Initialize the plasma driver
 void PlasmaDriverInit(void)
 {
+	//Initialie power supply struct
+	init_supply_struct();
+
 	//Enable line driver 2 (HAL has initialized all GPIO)
 	HAL_GPIO_WritePin(LINE_DRIVER2_ENABLE_GPIO_Port, LINE_DRIVER2_ENABLE_Pin, GPIO_PIN_RESET);  //Enable = Low
 	printString("\n\rEnable Line Drive 2");
@@ -1615,6 +1822,7 @@ void PlasmaDoTask(void)
 		{
 			if (powerStatus == V500_ON)
 			{
+				//TODO: add auto frequency adjustment here. "RUN_MODE" is only used when the system is headless, i.e. not controlled over UART
 				sHbridge.on = 1; // Turn Hbridge on
 				programHbridge();
 			}
@@ -1623,4 +1831,9 @@ void PlasmaDoTask(void)
 		}
 	}
 }
+
+
+
+
+
 

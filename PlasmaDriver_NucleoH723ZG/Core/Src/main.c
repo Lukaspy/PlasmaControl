@@ -167,6 +167,7 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   PlasmaDriverInit();  			//Initialize plasma driver
 
+
   while (1)
   {
 	PlasmaDoTask();     	    //Handle plasma driver task
