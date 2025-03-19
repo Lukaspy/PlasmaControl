@@ -34,7 +34,7 @@ class PlasmaSerialInterface:
         """Queries whether the 3.3V supply is active
         returns True is active, False otherwise"""
 
-        self._send("3.3?")
+        self._send("p3.3?")
 
         reply = self.ser.readline()
 
@@ -47,7 +47,7 @@ class PlasmaSerialInterface:
         """Queries whether the 15V supply is active
         returns True is active, False otherwise"""
 
-        self._send("15?")
+        self._send("p15?")
 
         reply = self.ser.readline()
 
@@ -60,7 +60,7 @@ class PlasmaSerialInterface:
         """Queries whether the high voltage supply is active
         returns True is active, False otherwise"""
 
-        self._send("hv?")
+        self._send("phv?")
 
         reply = self.ser.readline()
 
@@ -73,7 +73,7 @@ class PlasmaSerialInterface:
         """Toggles the low voltage (15v and 3.3V supplies)
         returns True if supplies are turrned on, False otherwise"""
         
-        self._send("lv")
+        self._send("plv!")
 
         reply = self.ser.readline();
 
@@ -86,7 +86,7 @@ class PlasmaSerialInterface:
         """Toggles the high voltage (500V supply)
         returns True if supply are turrned on, False otherwise"""
         
-        self._send("hv")
+        self._send("phv!")
 
         reply = self.ser.readline();
 
