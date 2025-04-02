@@ -1616,6 +1616,11 @@ static void TestModeAction(char input)
 	}
 }
 
+enum rc_state_enum {
+	IDLE,
+	PLASMA
+
+};
 
 /**
  * Stores variables describing the current state of
@@ -1623,7 +1628,9 @@ static void TestModeAction(char input)
  * store a 0 or 1, denoting a boolean value
  */
 struct rc_state {
-	char idle;
+	rc_state_enum state = IDLE;
+	char logging;
+	int log_rate; //periods allowed to pass before updating log
 };
 typedef struct rc_state rc_state;
 
@@ -1633,6 +1640,7 @@ typedef struct rc_state rc_state;
 static rc_state init_rc_state() {
 	rc_state ret_state;
 	ret_state.idle = 1;
+	ret_state.logging = 0;
 
 	return ret_state;
 }
@@ -1746,11 +1754,42 @@ static void remoteControl()
 				case 's':
 
 					break;
+
+				//Manually modify deadtime
+				case 'd':
+
+					break;
+
+				//query/set voltage
+				case 'v':
+
+					break;
+
+				//query/set frequency
+				case 'f':
+
+					break;
+
+				//query adc 3 (supplies/temp
+				case 'a':
+
+					break;
+
+				//modify datalogging flag
+				case 'l':
+
+					break;
 			}
 
 		}
 
 		//Act on current state
+		switch (current_state) {
+			case IDLE:
+
+				break;
+
+		}
 
 
 	}
