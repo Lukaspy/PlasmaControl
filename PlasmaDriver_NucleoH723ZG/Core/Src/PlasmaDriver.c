@@ -1631,6 +1631,7 @@ struct rc_state {
 	rc_state_enum state = IDLE;
 	char logging;
 	int log_rate; //periods allowed to pass before updating log
+	int voltage;
 };
 typedef struct rc_state rc_state;
 
@@ -1766,23 +1767,48 @@ static void remoteControl()
 					} else if (input[1] == '!') {
 
 						//Convert the string deadtime % input into an integer
-						int newDeadtime;
+						int new_deadtime;
 						for (int i = 2; i < strlen(input)-2; i++) {
-							newDeadtime += i * atoi(input[i]);
+							new_deadtime += i * atoi(input[i]);
 						}
 
-						sHbridge.deadtime = newDeadtime;
+						sHbridge.deadtime = new_deadtime;
 						programHbridge;
 					}
 					break;
 
 				//query/set voltage
 				case 'v':
+					if (input[1] == '?') {
+						char output[10];
+						sprintf(output, "%d", current_state.voltage);
+						printString(output);
+					} else {
+						int i = 1;
+						int new_voltage;
+						//read new voltage from input
+						while (input[i] != '\0') {
+							new_voltage += i * atoi(input[i]);
+						}
+						current_state.voltage = new_voltage;
+					}
 
 					break;
 
 				//query/set frequency
 				case 'f':
+					if (input[1] == '?') {
+						char output[5];
+						sprintf(output, "%d", sHbridge.frequency);
+						printString(output);
+					} else {
+						//read new freq from input
+						while (input[i] != '\0') {
+							new_freq += i * atoi(input[i]);
+						}
+						sHbridge.frequency = new_freq;
+						programHbridge;
+					}
 
 					break;
 
