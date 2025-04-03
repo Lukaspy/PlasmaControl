@@ -1755,9 +1755,25 @@ static void remoteControl()
 
 					break;
 
-				//Manually modify deadtime
+				//query/modify deadtime
 				case 'd':
 
+					if (input[1] == '?'){
+						char output[2];
+						sprintf(output, "%d", sHbridge.deadtime);
+						printString(output);
+						break;
+					} else if (input[1] == '!') {
+
+						//Convert the string deadtime % input into an integer
+						int newDeadtime;
+						for (int i = 2; i < strlen(input)-2; i++) {
+							newDeadtime += i * atoi(input[i]);
+						}
+
+						sHbridge.deadtime = newDeadtime;
+						programHbridge;
+					}
 					break;
 
 				//query/set voltage
@@ -1770,7 +1786,7 @@ static void remoteControl()
 
 					break;
 
-				//query adc 3 (supplies/temp
+				//query adc 3 (supplies/temp)
 				case 'a':
 
 					break;
