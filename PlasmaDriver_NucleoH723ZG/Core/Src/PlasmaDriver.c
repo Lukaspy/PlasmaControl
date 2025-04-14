@@ -1616,10 +1616,117 @@ static void TestModeAction(char input)
 	}
 }
 
+
+
+/**
+ * Auto frequency and voltage adjustment routine modified for remote control via gui
+ */
+void adjust_plasma(char log, int voltage)
+{
+
+	//Start timer24 which is used to time when each ADC measurement is captured
+	HAL_TIM_Base_Start(&htim24);
+
+
+	uint32_t startTime = __HAL_TIM_GET_COUNTER(&htim24);//TIM24->CNT;
+	measureBridgePlasmaADC12();
+	//Wait until ADC3 reading is done
+	while (sADC.adc12_reading);
+	uint32_t stopTime = __HAL_TIM_GET_COUNTER(&htim24);//TIM24->CNT;
+
+
+	//Calculate delta f
+	int16_t freqCorr;
+	freqCorrection(&freqCorr);
+
+
+
+	if (sHbridge.frequency + freqCorr > MAX_FREQUENCY)
+	{   // Calculated freq is higher than max
+		sHbridge.frequency = MAX_FREQUENCY;
+	}
+	else if (sHbridge.frequency + freqCorr < MIN_FREQUENCY)
+	{
+		sHbridge.frequency = MIN_FREQUENCY;
+	}
+	else
+	{
+		sHbridge.frequency = sHbridge.frequency + freqCorr;
+	}
+
+
+
+	/*
+	 * Voltage correction section
+	 */
+	if (voltage != -1) {
+		int16_t voltageCorr;
+		voltageCorrection(voltage, &voltageCorr);
+
+
+		if (sHbridge.deadtime + voltageCorr > MAX_DEADTIME)
+		{   // Calculated voltage is higher than max
+			sHbridge.deadtime = MAX_DEADTIME;
+		}
+		else if (sHbridge.deadtime + voltageCorr < MIN_DEADTIME)
+		{
+			sHbridge.deadtime = MIN_DEADTIME;
+		}
+		else
+		{
+			sHbridge.deadtime = sHbridge.deadtime + voltageCorr;
+		}
+	}
+
+	programHbridge();
+
+	//Print current ADC data
+	if (log == 1) {
+		printHbridgeDatalogging(startTime, stopTime);
+	}
+
+
+}
+
+
+/**
+ * Starts plasma and writes the log header if applicable
+ */
+void start_plasma(char log_flag) {
+	if (log_flag == 1) {
+		printString("Time(us),Freq (Hz),Deadtime (%),Bridge I,VplaL1,VplaL2,VbriS1,VbriS2");
+		printCR();
+	}
+
+	PowerOnHighSupplies();
+
+	sHbridge.deadtime = 1;
+	sHbridge.frequency = 45000;
+	sHbridge.on = 1;
+	programHbridge();
+
+}
+
+
+/**
+ * Shuts down plasma and places system in a safe state (powers down HV)
+ */
+void stop_plasma() {
+	sHbridge.on = 0;
+	programHbridge();
+	PowerOffHighSupplies();
+}
+
+
+/*IDLE: plasma is not active
+ * STRIKE: plasma was just commanded to start
+ * ACTIVE: plasma running
+ */
 enum rc_state_enum {
 	IDLE,
-	PLASMA
-
+	STRIKE,
+	ACTIVE,
+	STOP
 };
 
 /**
@@ -1628,10 +1735,12 @@ enum rc_state_enum {
  * store a 0 or 1, denoting a boolean value
  */
 struct rc_state {
-	rc_state_enum state = IDLE;
+	enum rc_state_enum state;
 	char logging;
 	int log_rate; //periods allowed to pass before updating log
+	int rate_counter; //used to count whether this period should be logged or passed
 	int voltage;
+
 };
 typedef struct rc_state rc_state;
 
@@ -1640,8 +1749,11 @@ typedef struct rc_state rc_state;
  */
 static rc_state init_rc_state() {
 	rc_state ret_state;
-	ret_state.idle = 1;
+	ret_state.state = IDLE;
 	ret_state.logging = 0;
+	ret_state.log_rate = 0; //no limit on log rate
+	ret_state.rate_counter = 0;
+	ret_state.voltage = -1; //-1 means no voltage correction
 
 	return ret_state;
 }
@@ -1754,6 +1866,21 @@ static void remoteControl()
 				//start plasma related command
 				case 's':
 
+					//Query plasma status
+					if (input[1] == '?') {
+						if (current_state.state != IDLE) {
+							printString("on");
+						} else {
+							printString("off");
+						}
+					} else if (input[1] == '!') { //Toggle plasma state
+						if (current_state.state == IDLE) {
+							current_state.state = STRIKE;
+						} else {
+							current_state.state = STOP;
+						}
+					}
+
 					break;
 
 				//query/modify deadtime
@@ -1773,7 +1900,7 @@ static void remoteControl()
 						}
 
 						sHbridge.deadtime = new_deadtime;
-						programHbridge;
+						programHbridge();
 					}
 					break;
 
@@ -1803,8 +1930,11 @@ static void remoteControl()
 						printString(output);
 					} else {
 						//read new freq from input
+						int i = 1;
+						int new_freq;
 						while (input[i] != '\0') {
 							new_freq += i * atoi(input[i]);
+							i++;
 						}
 						sHbridge.frequency = new_freq;
 						programHbridge;
@@ -1814,21 +1944,52 @@ static void remoteControl()
 
 				//query adc 3 (supplies/temp)
 				case 'a':
-
+					//TODO: this needs to use a modified function that prints csv format
+					printADC3data();
 					break;
 
 				//modify datalogging flag
 				case 'l':
-
+					//Enable or disable datalogging flag in struct
+					if (input[1] == '1') {
+						current_state.logging = 1;
+					} else if (input[1] == '0') {
+						current_state.logging = 0;
+					}
 					break;
 			}
 
 		}
 
 		//Act on current state
-		switch (current_state) {
+		switch (current_state.state) {
 			case IDLE:
 
+				break;
+
+			case STOP:
+				stop_plasma();
+				break;
+
+			case STRIKE:
+				start_plasma(current_state.logging);
+				current_state.state = ACTIVE;
+				break;
+
+			case ACTIVE:
+				//This period will be logged (i.e. 'logging_rate' periods have passed since last log update
+				if (current_state.rate_counter == current_state.log_rate) {
+					adjust_plasma(current_state.logging, current_state.voltage);
+					current_state.rate_counter = 0;
+				} else if (current_state.rate_counter != current_state.log_rate) {
+					adjust_plasma(0, current_state.voltage);
+				}
+
+
+				//if a logging rate is specified, the couter is updated. other wise the counter remains at zero
+				if (current_state.log_rate != 0) {
+					current_state.rate_counter++;
+				}
 				break;
 
 		}
