@@ -1937,7 +1937,7 @@ static void remoteControl()
 							i++;
 						}
 						sHbridge.frequency = new_freq;
-						programHbridge;
+						programHbridge();
 					}
 
 					break;
@@ -1957,6 +1957,11 @@ static void remoteControl()
 						current_state.logging = 0;
 					}
 					break;
+
+				//Stop plasma (can also be stopped by toggling using 's!'
+				case 'q':
+					current_state.state = STOP;
+
 			}
 
 		}
