@@ -1,4 +1,5 @@
 from threading import Thread
+import threading
 import serial
 
 import PlasmaException
@@ -34,7 +35,7 @@ class PlasmaSerialInterface:
         """Queries whether the 3.3V supply is active
         returns True is active, False otherwise"""
 
-        self._send("p3.3?")
+        self._send("p?3.3")
 
         reply = self.ser.readline()
 
@@ -47,7 +48,7 @@ class PlasmaSerialInterface:
         """Queries whether the 15V supply is active
         returns True is active, False otherwise"""
 
-        self._send("p15?")
+        self._send("p?15")
 
         reply = self.ser.readline()
 
@@ -60,7 +61,7 @@ class PlasmaSerialInterface:
         """Queries whether the high voltage supply is active
         returns True is active, False otherwise"""
 
-        self._send("phv?")
+        self._send("p?hv")
 
         reply = self.ser.readline()
 
@@ -73,11 +74,11 @@ class PlasmaSerialInterface:
         """Toggles the low voltage (15v and 3.3V supplies)
         returns True if supplies are turrned on, False otherwise"""
         
-        self._send("plv!")
+        self._send("p?lv")
 
-        reply = self.ser.readline();
+        reply = self.ser.readline()
 
-        if reply == "on":
+        if reply.strip() == b"on":
             return True
         else:
             return False
@@ -86,20 +87,36 @@ class PlasmaSerialInterface:
         """Toggles the high voltage (500V supply)
         returns True if supply are turrned on, False otherwise"""
         
-        self._send("phv!")
+        self._send("p!hv")
 
-        reply = self.ser.readline();
+        reply = self.ser.readline()
 
-        if reply == "on":
+        if reply.strip() == b"on":
             return True
         else:
             return False
 
+    def set_freq(self, freq):
+        self._send("f\r"+str(freq))
 
-    def start_plasma(self, datalog_flag, auto_voltage_flag, auto_freq_flag, voltage, manual_freq=30000, datalog_filepath=""):
+    def query_freq(self):
+        self._send("")
+
+    def set_voltage(self, voltage):
+        self._send("v!" + voltage)
+
+    def query_voltage(self):
+        self._send("v?")
+
+        return self.ser.readline()
+
+
+
+
+    def start_plasma(self, datalog_flag, auto_voltage_flag, auto_freq_flag, voltage=-1, manual_freq=30000, datalog_filepath=""):
         """Activates the plasma depending on the boolean flag parameters"""
 
-        if not self.query_hv_supply or not self.query_15_supply or not self.query_3_3_supply:
+        if not self.query_hv_supply() or not self.query_15_supply() or not self.query_3_3_supply():
             raise PlasmaException('Supplies not on!')
         
         if not datalog_flag:
@@ -107,31 +124,31 @@ class PlasmaSerialInterface:
                #TODO: Figure out what syntax should be for manual control
                raise PlasmaException("Not Implemented")
             if not auto_voltage_flag and auto_freq_flag:
-                self._send("sp")
+                self.set_voltage("-1")
+                self._send("s!")
             
         else:
             try:
                 file = open(datalog_filepath, 'wb')
             except:
                 raise IOError
+                
 
-            self._send("spdl")
+            self._send("s!")
 
             self.ser.reset_input_buffer()
 
-            #TODO: start a listner that montiors for a stop signal from the gui
-            #figure out how to share a listener from to gui into this function
 
-            while True:
+        self.stop_event = threading.Event()
+
+        with open(datalog_filepath, 'wb') as file:
+            while not self.stop_event.is_set():
                 data = self.ser.readline()
                 file.write(data)
-
         
         #now shutting down the plasma
         self._send("q")
 
-    def set_freq(self, freq):
-        self._send("f\r"+str(freq))
 
         
         
