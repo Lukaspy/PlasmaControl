@@ -23,7 +23,7 @@ class PlasmaSerialInterface:
         self._send("~")
         data = self.ser.readline()
 
-       if not data:
+        if not data:
             return False
         
         self.initialized = True
