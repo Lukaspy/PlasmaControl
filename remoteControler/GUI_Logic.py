@@ -21,7 +21,7 @@ class GUILogic(QMainWindow, Ui_MainWindow):
      # Initialize the PlasmaSerialInterface
         try:
             # Adjust the serial port as needed (e.g., "COM3" on Windows or "/dev/ttyACM0" on Linux)
-            self.plasma_interface = PlasmaSerialInterface('COM3')
+            self.plasma_interface = PlasmaSerialInterface('/dev/ttyACM0')
             if not self.plasma_interface.initialize():
                 self.show_warning_popup("Microcontroller not responding. Check connection.")
         except Exception as e:
@@ -54,6 +54,9 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         self.system_on = True
         self.led_system_status.setStyleSheet("background-color: green; border-radius: 40px;")
         self.label_system_status_value.setText("On")
+        
+        self.plasma_interface.toggle_low_voltage()
+        self.plasma_interface.toggle_high_voltage()
 
         print("Power On button was pushed")
     
@@ -64,6 +67,10 @@ class GUILogic(QMainWindow, Ui_MainWindow):
 
         self.led_system_status.setStyleSheet("background-color: red; border-radius: 40px;")
         self.label_system_status_value.setText("Off")
+
+        self.plasma_interface.toggle_low_voltage()
+        self.plasma_interface.toggle_high_voltage()
+
         print("Power Off button was pushed")
     
     def handle_strike_plasma(self):

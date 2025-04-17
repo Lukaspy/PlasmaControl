@@ -45,7 +45,7 @@
 ../Core/Src/PlasmaDriver.c:1765:13:init_rc	1
 ../Core/Src/PlasmaDriver.c:1772:13:querySupply	7
 ../Core/Src/PlasmaDriver.c:1802:13:toggleSupply	5
-../Core/Src/PlasmaDriver.c:1829:13:remoteControl	32
-../Core/Src/PlasmaDriver.c:2013:13:PlasmaDriverMenu	7
-../Core/Src/PlasmaDriver.c:2049:6:PlasmaDriverInit	5
-../Core/Src/PlasmaDriver.c:2094:6:PlasmaDoTask	4
+../Core/Src/PlasmaDriver.c:1829:13:remoteControl	33
+../Core/Src/PlasmaDriver.c:2018:13:PlasmaDriverMenu	7
+../Core/Src/PlasmaDriver.c:2054:6:PlasmaDriverInit	5
+../Core/Src/PlasmaDriver.c:2099:6:PlasmaDoTask	4

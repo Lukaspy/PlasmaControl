@@ -13,14 +13,15 @@ class PlasmaSerialInterface:
 
 
     def _send(self, data):
-        self.ser.write(data + "\r")
+        self.ser.write(data.encode() + b"\r")
 
     def initialize(self):
         """Initializes communication with the microcontroller. Returns True if 
         device is connected, False otherwise"""
-        self.ser = serial.Serial(self.serial_port, self.baud_rate, self.timeout)
+        self.ser = serial.Serial(self.serial_port, self.baud_rate, timeout=self.timeout)
         self.ser.reset_input_buffer()
 
+        self._send("~")
         self._send("~")
         data = self.ser.readline()
 
@@ -109,6 +110,7 @@ class PlasmaSerialInterface:
         self._send("v?")
 
         return self.ser.readline()
+    
 
 
 

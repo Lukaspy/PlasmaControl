@@ -46,6 +46,6 @@
 ../Core/Src/PlasmaDriver.c:1772:13:querySupply	16	static
 ../Core/Src/PlasmaDriver.c:1802:13:toggleSupply	24	static
 ../Core/Src/PlasmaDriver.c:1829:13:remoteControl	176	static
-../Core/Src/PlasmaDriver.c:2013:13:PlasmaDriverMenu	24	static
-../Core/Src/PlasmaDriver.c:2049:6:PlasmaDriverInit	8	static
-../Core/Src/PlasmaDriver.c:2094:6:PlasmaDoTask	8	static
+../Core/Src/PlasmaDriver.c:2018:13:PlasmaDriverMenu	24	static
+../Core/Src/PlasmaDriver.c:2054:6:PlasmaDriverInit	8	static
+../Core/Src/PlasmaDriver.c:2099:6:PlasmaDoTask	8	static
