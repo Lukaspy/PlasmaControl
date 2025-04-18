@@ -62,15 +62,21 @@ class GUILogic(QMainWindow, Ui_MainWindow):
     
     def handle_power_off(self):
         ## TODO Change system indicators to update on ADC measurment not button press
-        self.system_on = False
         self.handle_plasma_off()
+
+        self.plasma_interface.toggle_low_voltage()
+        self.plasma_interface.toggle_high_voltage()
+        
+        if (self.plasma_interface.query_15_supply() or self.plasma_interface.query_3_3_supply() or self.plasma_interface.query_15_supply):
+            print("system is in undefined state. Power off unsuccessful")
+            return
+
 
         self.led_system_status.setStyleSheet("background-color: red; border-radius: 40px;")
         self.label_system_status_value.setText("Off")
 
-        self.plasma_interface.toggle_low_voltage()
-        self.plasma_interface.toggle_high_voltage()
 
+        self.system_on = False
         print("Power Off button was pushed")
     
     def handle_strike_plasma(self):
