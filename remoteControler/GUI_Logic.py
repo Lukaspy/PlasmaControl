@@ -1,5 +1,6 @@
 ## Author Nolan Olaso
 
+import threading
 from PySide6.QtWidgets import QMainWindow, QMessageBox, QFileDialog
 from plasma_control_GUI import Ui_MainWindow
 from PlasmaSerialInterface import PlasmaSerialInterface
@@ -17,6 +18,8 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         self.manual_frequency_allowed = False # Can auto control be turned off?
         self.data_logging_allowed = False #Can data logging be turned on?
         self.save_location = ""
+        self.plasma_thread = None
+        self.stop_event = threading.Event()
 
      # Initialize the PlasmaSerialInterface
         try:
@@ -100,8 +103,13 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         auto_freq_flag = not self.manual_frequency_allowed
 
         try:
-            # Directly calling start_plasma on an existing instance
-            self.plasma_interface.start_plasma(self.data_logging_allowed, auto_voltage_flag, auto_freq_flag, self.manual_voltage_selection, self.manual_frequency_selection,self.save_location)
+
+            #start the plasma thread in the background
+            self.stop_event.clear()
+            self.plasma_thread = threading.Thread(target=self.plasma_interface.start_plasma, args=(self.enable_data_logging.isChecked,\
+                self.enable_auto_voltage_correction.isChecked, self.enable_auto_frequency_correction.isChecked, self.stop_event, self.manual_voltage_selection, self.manual_frequency_selection, self.save_location), daemon=True)
+            
+            self.plasma_thread.start()
         
         except Exception as e:
             self.show_warning_popup("Failed to start plasma: " + str(e))
@@ -115,6 +123,9 @@ class GUILogic(QMainWindow, Ui_MainWindow):
     
     def handle_plasma_off(self):
         ## TODO Change system indicators to update on ADC measurment not button press
+        self.stop_plasma.set()
+        self.thread.join()
+        
         self.led_plasma_status.setStyleSheet("background-color: red; border-radius: 40px;")
         self.label_plasma_status_value.setText("Off")
 

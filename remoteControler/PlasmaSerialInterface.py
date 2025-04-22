@@ -1,4 +1,3 @@
-from threading import Thread
 import threading
 import serial
 
@@ -130,7 +129,7 @@ class PlasmaSerialInterface:
 
 
 
-    def start_plasma(self, datalog_flag, auto_voltage_flag, auto_freq_flag, voltage=-1, manual_freq=30000, datalog_filepath=""):
+    def start_plasma(self, datalog_flag, auto_voltage_flag, auto_freq_flag, stop_event, voltage=-1, manual_freq=30000,  datalog_filepath=""):
         """Activates the plasma depending on the boolean flag parameters"""
 
         if not self.query_hv_supply() or not self.query_15_supply() or not self.query_3_3_supply():
@@ -156,10 +155,9 @@ class PlasmaSerialInterface:
             self.ser.reset_input_buffer()
 
 
-        self.stop_event = threading.Event()
 
         with open(datalog_filepath, 'wb') as file:
-            while not self.stop_event.is_set():
+            while not stop_event.is_set():
                 data = self.ser.readline()
                 file.write(data)
         
