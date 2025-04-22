@@ -160,6 +160,7 @@ class PlasmaSerialInterface:
             while not stop_event.is_set():
                 data = self.ser.readline()
                 file.write(data)
+                file.flush()
         
         #now shutting down the plasma
         self._send("q")

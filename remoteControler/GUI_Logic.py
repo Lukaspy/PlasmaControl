@@ -19,6 +19,7 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         self.data_logging_allowed = False #Can data logging be turned on?
         self.save_location = ""
         self.plasma_thread = None
+        self.logging_thread = None
         self.stop_event = threading.Event()
 
      # Initialize the PlasmaSerialInterface
@@ -81,17 +82,21 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         self.system_on = False
         print("Power Off button was pushed")
     
-    def handle_strike_plasma(self):
-        ## TODO Change system indicators to update on ADC measurment not button press
-        
-        if not self.system_on:
-            self.show_warning_popup("Please ensure system is powered on before attempting to strike a plasma.")
-            return
 
-        self.led_plasma_status.setStyleSheet("background-color: green; border-radius: 40px;")
-        self.label_plasma_status_value.setText("On")
+    def live_plot(self, plotting_flag):
+        #TODO: update a matplotlib plot from csv
+        with open(self.data_logging_save_location, 'r') as file:
+            while not self.stop_event.is_set():
+                new_line = file.readline()
+                if not new_line: continue #there is new data to update
 
-        print("Strike Plasma button was pushed")
+                #extract period number
+                #is this line the start of a new period?
+                #if yes, read in all of the matching data points, plot, then continue
+
+                #else, is this line describing adc3 readings? 
+                #then update supply voltage readout
+    
 
     def handle_strike_plasma(self):
         if not self.system_on:
@@ -117,6 +122,10 @@ class GUILogic(QMainWindow, Ui_MainWindow):
             return
 
         ## TODO Change system indicators to update on ADC measurment not button press
+
+        #start datalogging/supply voltage updates
+        self.logging_thread = threading.Thread()
+
         self.led_plasma_status.setStyleSheet("background-color: green; border-radius: 40px;")
         self.label_plasma_status_value.setText("On")
 
