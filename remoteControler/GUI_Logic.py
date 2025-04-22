@@ -102,10 +102,6 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         if not self.system_on:
             self.show_warning_popup("Please ensure system is powered on before attempting to strike a plasma.")
             return
-    
-        # I think these need to be flipped, I'm not sure
-        auto_voltage_flag = not self.manual_voltage_allowed
-        auto_freq_flag = not self.manual_frequency_allowed
 
         try:
 
