@@ -124,7 +124,8 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         ## TODO Change system indicators to update on ADC measurment not button press
 
         #start datalogging/supply voltage updates
-        self.logging_thread = threading.Thread()
+        self.logging_thread = threading.Thread(target=self.live_plot, args=(self.enable_data_logging.isChekced))
+        self.logging_thread.start()
 
         self.led_plasma_status.setStyleSheet("background-color: green; border-radius: 40px;")
         self.label_plasma_status_value.setText("On")
