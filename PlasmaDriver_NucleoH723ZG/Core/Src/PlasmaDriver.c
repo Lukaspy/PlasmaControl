@@ -1367,8 +1367,8 @@ int PowerOnHighSupplies_rc(void)
 	}
 	else
 	{
-		PowerOffHighSupplies();
-		return(0);
+		/*PowerOffHighSupplies();  //TODO: When the system actually turns on a HVDC supply, this will need uncommented
+		return(0);*/
 	}
 
 	//Signal to robot controller all power supplies are active
@@ -1894,6 +1894,7 @@ static char toggleSupply(char *input) {
 			status = PowerOnHighSupplies_rc();
 		}
 
+
 	}
 
 	return status;
@@ -2088,6 +2089,7 @@ static void remoteControl()
 			current_state.state = STOP;
 
 		}
+
 
 	}
 

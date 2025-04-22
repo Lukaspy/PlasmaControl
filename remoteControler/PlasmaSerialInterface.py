@@ -1,5 +1,6 @@
 import threading
 import serial
+import time
 
 import PlasmaException
 
@@ -11,8 +12,15 @@ class PlasmaSerialInterface:
         self.timeout = 0.1
 
 
+    """The microcontroller does not have a uart buffer. 
+    Must send each char with a slight delay to allow stm to process the command
+    """
     def _send(self, data):
-        self.ser.write(data.encode() + b"\r")
+        for char in data:
+            self.ser.write(char.encode())
+            time.sleep(10/1000)
+        #self.ser.write(data.encode() + b"\r")
+        self.ser.write(b"\r")
 
     def initialize(self):
         """Initializes communication with the microcontroller. Returns True if 
@@ -74,7 +82,8 @@ class PlasmaSerialInterface:
         """Toggles the low voltage (15v and 3.3V supplies)
         returns True if supplies are turrned on, False otherwise"""
         
-        self._send("p?lv")
+        self.ser.reset_input_buffer()
+        self._send("p!lv")
 
         reply = self.ser.readline()
 
