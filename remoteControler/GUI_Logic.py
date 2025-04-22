@@ -151,19 +151,19 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         self.plasma_interface.set_freq(self.manual_frequency_selection.text())
     
     def handle_enable_auto_voltage_correction(self,state):
-        if not state:  # If user is trying to disable auto control
+        if state:  # If user is trying to enable auto control
             try:
                 if not self.manual_voltage_allowed:
-                    self.enable_auto_voltage_correction.setChecked(True)  # Re-enable checkbox
+                    self.enable_auto_voltage_correction.setChecked(False)  # Re-enable checkbox
                     raise ValueError
             except ValueError:
-                self.show_warning_popup("Please enter a manual control value before disabling auto control.")
+                self.show_warning_popup("Please enter a set point before enabling auto control.")
                 return
                 
         self.checkbox_toggled("Voltage Auto Control", state)
         self.plasma_interface.set_auto_voltage(self.enable_auto_frequency_correction.checkState())
         #clear input box if enabling automatic control
-        if state:
+        if not state:
             self.manual_frequency_selection.clear()
 
     def handle_enable_auto_frequency_correction(self,state):

@@ -125,7 +125,7 @@ class Ui_MainWindow(object):
         self.enable_auto_voltage_correction = QCheckBox(self.frame_q3)
         self.enable_auto_voltage_correction.setObjectName(u"enable_auto_voltage_correction")
         self.enable_auto_voltage_correction.setGeometry(QRect(10, 10, 181, 20)) # Position
-        self.enable_auto_voltage_correction.setChecked(True)
+        self.enable_auto_voltage_correction.setChecked(False)
 
         # Groupbox for manual controls
         self.group_manual_controls = QGroupBox(self.frame_q3)
