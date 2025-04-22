@@ -111,6 +111,21 @@ class PlasmaSerialInterface:
 
         return self.ser.readline()
     
+    def set_auto_freq(self, new_setting):
+        send_flag = 0
+
+        if new_setting:
+            send_flag = 1
+
+        self._send("mf"+str(send_flag))
+    
+    def set_auto_voltage(self, new_setting):
+        send_flag = 0
+
+        if new_setting:
+            send_flag = 1
+
+        self._send("mv"+str(send_flag))
 
 
 

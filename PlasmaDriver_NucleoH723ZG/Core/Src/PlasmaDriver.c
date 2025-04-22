@@ -1811,6 +1811,8 @@ enum rc_state_enum {
 struct rc_state {
 	enum rc_state_enum state;
 	char logging;
+	char auto_freq;
+	char auto_voltage;
 	int log_rate; //periods allowed to pass before updating log
 	int rate_counter; //used to count whether this period should be logged or passed
 	int voltage;
@@ -1825,6 +1827,8 @@ static rc_state init_rc_state() {
 	rc_state ret_state;
 	ret_state.state = IDLE;
 	ret_state.logging = 0;
+	ret_state.auto_freq = 1;
+	ret_state.auto_voltage = 1;
 	ret_state.log_rate = 0; //no limit on log rate
 	ret_state.rate_counter = 0;
 	ret_state.voltage = -1; //-1 means no voltage correction
@@ -2020,18 +2024,18 @@ static void remoteControl()
 			//query/set frequency
 		case 'f':
 			if (input[1] == '?') {
-				char output[5];
+				char output[16];
 				sprintf(output, "%d", sHbridge.frequency);
 				printString(output);
 			} else {
 				//read new freq from input
 				int i = 1;
-				int new_freq;
+				char new_freq[16];
 				while (input[i] != '\0') {
-					new_freq += i * atoi(input[i]);
+					new_freq[i-1] = input[1];
 					i++;
 				}
-				sHbridge.frequency = new_freq;
+				sHbridge.frequency = atoi(new_freq);
 				programHbridge();
 			}
 
@@ -2052,6 +2056,32 @@ static void remoteControl()
 				current_state.logging = 0;
 			}
 			break;
+
+		case 'm': //modify auto_freq/auto_voltage flags
+			switch (input[1]) {
+				case 'f':
+					//Turn on auto frequency adjustment
+					if (input[2] == '1'){
+						current_state.auto_freq = 1;
+					} else {
+						current_state.auto_freq = 0;
+
+					}
+					break;
+
+				case 'v':
+					//Turn on auto frequency adjustment
+					if (input[2] == '1'){
+						current_state.auto_voltage = 1;
+					} else {
+						current_state.auto_voltage = 0;
+
+					}
+					break;
+			}
+
+			break;
+
 
 			//Stop plasma (can also be stopped by toggling using 's!'
 		case 'q':

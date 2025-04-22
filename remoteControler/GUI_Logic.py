@@ -51,12 +51,14 @@ class GUILogic(QMainWindow, Ui_MainWindow):
  ## TODO Add dedicated methods instead of printing to console. 
     def handle_power_on(self):
         ## TODO Change system indicators to update on ADC measurment not button press
+        
+        if (not self.plasma_interface.toggle_low_voltage() or not self.plasma_interface.toggle_high_voltage()):
+            print("Power on unsucessful")
+            return
+
         self.system_on = True
         self.led_system_status.setStyleSheet("background-color: green; border-radius: 40px;")
         self.label_system_status_value.setText("On")
-        
-        self.plasma_interface.toggle_low_voltage()
-        self.plasma_interface.toggle_high_voltage()
 
         print("Power On button was pushed")
     
@@ -64,10 +66,7 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         ## TODO Change system indicators to update on ADC measurment not button press
         self.handle_plasma_off()
 
-        self.plasma_interface.toggle_low_voltage()
-        self.plasma_interface.toggle_high_voltage()
-        
-        if (self.plasma_interface.query_15_supply() or self.plasma_interface.query_3_3_supply() or self.plasma_interface.query_15_supply):
+        if (self.plasma_interface.toggle_low_voltage() or self.plasma_interface.toggle_high_voltage()):
             print("system is in undefined state. Power off unsuccessful")
             return
 
@@ -134,11 +133,12 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         
         self.manual_voltage_allowed = True
         self.text_entered("V", self.manual_voltage_selection.text())
+        self.plasma_interface.set_voltage(self.manual_voltage_selection.text())
     
     def handle_manual_frequency_selection(self):
         try:
             frequency = float(self.manual_frequency_selection.text())
-            if not (20 <= frequency <= 50):  # Check if frequency is within the valid range
+            if not (20 <= frequency <= 65):  # Check if frequency is within the valid range
                 self.manual_frequency_allowed = False
                 raise ValueError        
         except ValueError:
@@ -148,6 +148,7 @@ class GUILogic(QMainWindow, Ui_MainWindow):
 
         self.manual_frequency_allowed = True
         self.text_entered("kHz", self.manual_frequency_selection.text())
+        self.plasma_interface.set_freq(self.manual_frequency_selection.text())
     
     def handle_enable_auto_voltage_correction(self,state):
         if not state:  # If user is trying to disable auto control
@@ -160,6 +161,10 @@ class GUILogic(QMainWindow, Ui_MainWindow):
                 return
                 
         self.checkbox_toggled("Voltage Auto Control", state)
+        self.plasma_interface.set_auto_voltage(self.enable_auto_frequency_correction.checkState())
+        #clear input box if enabling automatic control
+        if state:
+            self.manual_frequency_selection.clear()
 
     def handle_enable_auto_frequency_correction(self,state):
         if not state:  # If user is trying to disable auto control
@@ -167,11 +172,17 @@ class GUILogic(QMainWindow, Ui_MainWindow):
                 if not self.manual_frequency_allowed:
                     self.enable_auto_frequency_correction.setChecked(True)  # Re-enable checkbox
                     raise ValueError
+                
+
             except ValueError:
                 self.show_warning_popup("Please enter a manual control value before disabling auto control.")
                 return
 
         self.checkbox_toggled("Frequency Auto Control", state)
+        self.plasma_interface.set_auto_freq(self.enable_auto_frequency_correction.checkState())
+        #clear input box if enabling automatic control
+        if state:
+            self.manual_frequency_selection.clear()
 
     def handle_data_logging_save(self):
         file_path, _ = QFileDialog.getSaveFileName(self, "Save File", "", "All Files (*);;Text Files (*.txt);;Python Files (*.py)")
