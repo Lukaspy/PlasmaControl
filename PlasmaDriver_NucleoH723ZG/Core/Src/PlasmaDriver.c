@@ -1194,6 +1194,33 @@ char PowerOffLowSupplies(void)
 	return status;
 }
 
+//Power Off Supplies in order3.3V switch and 15V
+/**
+ * returns 1 if power off unsuccessful. 0 on success
+ */
+char PowerOffLowSupplies_rc(void)
+{
+	char status;
+	if (powerStatus == V500_OFF)
+	{
+		//Power off 3.3V switch voltage
+		HAL_GPIO_WritePin(OUT_3V3_SWITCH_GPIO_Port, OUT_3V3_SWITCH_Pin, GPIO_PIN_SET);
+		supply_status.s3_3V = 0;
+		HAL_Delay(1);	//Wait 1msec  TODO - Might need to be changed
+
+		//Power off 15V
+		HAL_GPIO_WritePin(OUT_15V_ENABLE_GPIO_Port, OUT_15V_ENABLE_Pin, GPIO_PIN_SET);		//There is an inverter between MCU and the output, thus SET
+		supply_status.s15V = 0;
+		HAL_Delay(1);	//Wait 1msec  TODO - Might need to be changed
+		status = 0;
+	}
+	else
+	{
+		status = 1;
+	}
+	return status;
+}
+
 
 //Power Off Supply 500V
 /**
@@ -1291,6 +1318,7 @@ int PowerOnLowSupplies_rc(void)
 
 	//Power on 3.3V switch voltage
 	HAL_GPIO_WritePin(OUT_3V3_SWITCH_GPIO_Port, OUT_3V3_SWITCH_Pin, GPIO_PIN_RESET);
+	supply_status.s3_3V = 1;
 	HAL_Delay(1);	//Wait 1msec  TODO - Might need to be changed
 
 	return(1);
@@ -1335,6 +1363,7 @@ int PowerOnHighSupplies(void)
 	HAL_GPIO_WritePin(LED_ACTIVE_GPIO_Port, LED_ACTIVE_Pin, GPIO_PIN_RESET);	//There is an inverter between MCU and the output, thus RESET
 
 	powerStatus = V500_ON;
+	supply_status.sHV = 1;
 
 	return(1);
 }
@@ -1361,7 +1390,7 @@ int PowerOnHighSupplies_rc(void)
 	while (sADC.adc3_reading) ;
 
 	//Check 500V voltage
-	if (sADC.adc3_data[ADC3_500VDC] >= sADC3threshold[ADC3_500VDC])
+	if (1)//(sADC.adc3_data[ADC3_500VDC] >= sADC3threshold[ADC3_500VDC]) //TODO: When the system actually turns on a HVDC supply, this will need uncommented
 	{
 		supply_status.sHV = 1;
 	}
@@ -1936,6 +1965,7 @@ static void remoteControl()
 				}
 
 			}
+			input[pos] = '\0';
 		}
 		switch (input[0])
 		{
@@ -2028,16 +2058,18 @@ static void remoteControl()
 				char output[16];
 				sprintf(output, "%d", sHbridge.frequency);
 				printString(output);
-			} else {
+			} else if (input[1] == '!'){
 				//read new freq from input
-				int i = 1;
+				int i = 2;
 				char new_freq[16];
 				while (input[i] != '\0') {
-					new_freq[i-1] = input[1];
+					new_freq[i-2] = input[i];
 					i++;
 				}
-				sHbridge.frequency = atoi(new_freq);
+				int new_freq_int = atoi(new_freq);
+				sHbridge.frequency = new_freq_int;
 				programHbridge();
+				printString("ok");
 			}
 
 			break;
@@ -2064,19 +2096,22 @@ static void remoteControl()
 					//Turn on auto frequency adjustment
 					if (input[2] == '1'){
 						current_state.auto_freq = 1;
+						printString("1");
 					} else {
 						current_state.auto_freq = 0;
+						printString("0");
 
 					}
 					break;
 
 				case 'v':
-					//Turn on auto frequency adjustment
+					//Turn on auto voltage adjustment
 					if (input[2] == '1'){
 						current_state.auto_voltage = 1;
+						printString("1");
 					} else {
 						current_state.auto_voltage = 0;
-
+						printString("0");
 					}
 					break;
 			}

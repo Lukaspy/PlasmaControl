@@ -55,6 +55,8 @@ class GUILogic(QMainWindow, Ui_MainWindow):
  ## TODO Add dedicated methods instead of printing to console. 
     def handle_power_on(self):
         ## TODO Change system indicators to update on ADC measurment not button press
+        if self.system_on:
+            return
         
         if (not self.plasma_interface.toggle_low_voltage() or not self.plasma_interface.toggle_high_voltage()):
             print("Power on unsucessful")
@@ -68,9 +70,11 @@ class GUILogic(QMainWindow, Ui_MainWindow):
     
     def handle_power_off(self):
         ## TODO Change system indicators to update on ADC measurment not button press
+        if not self.system_on:
+            return
         self.handle_plasma_off()
 
-        if (self.plasma_interface.toggle_low_voltage() or self.plasma_interface.toggle_high_voltage()):
+        if (self.plasma_interface.toggle_high_voltage() or self.plasma_interface.toggle_low_voltage()):
             print("system is in undefined state. Power off unsuccessful")
             return
 
@@ -129,8 +133,9 @@ class GUILogic(QMainWindow, Ui_MainWindow):
     
     def handle_plasma_off(self):
         ## TODO Change system indicators to update on ADC measurment not button press
-        self.stop_plasma.set()
-        self.thread.join()
+        if self.plasma_thread is not None and self.plasma_thread.is_alive():
+            self.stop_plasma.set()
+            self.plasma_thread.join()
         
         self.led_plasma_status.setStyleSheet("background-color: red; border-radius: 40px;")
         self.label_plasma_status_value.setText("Off")
@@ -165,7 +170,10 @@ class GUILogic(QMainWindow, Ui_MainWindow):
 
         self.manual_frequency_allowed = True
         self.text_entered("kHz", self.manual_frequency_selection.text())
-        self.plasma_interface.set_freq(self.manual_frequency_selection.text())
+        if not self.plasma_interface.set_freq(self.manual_frequency_selection.text()):
+            self.handle_power_off()
+            self.show_warning_popup("Error writing frequency. Shutting down system")
+
     
     def handle_enable_auto_voltage_correction(self,state):
         if state:  # If user is trying to enable auto control
@@ -196,7 +204,12 @@ class GUILogic(QMainWindow, Ui_MainWindow):
                 return
 
         self.checkbox_toggled("Frequency Auto Control", state)
-        self.plasma_interface.set_auto_freq(self.enable_auto_frequency_correction.checkState())
+
+        #send the command and verify the condition is set within the STM 
+        if self.plasma_interface.set_auto_freq(state) != state: 
+            self.enable_auto_frequency_correction.setChecked(not state)
+            return
+
         #clear input box if enabling automatic control
         if state:
             self.manual_frequency_selection.clear()

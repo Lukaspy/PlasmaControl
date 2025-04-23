@@ -106,13 +106,19 @@ class PlasmaSerialInterface:
             return False
 
     def set_freq(self, freq):
-        self._send("f\r"+str(freq))
+        self._send("f!"+str(int(freq)*1000))
+        reply = self.ser.readline().strip().decode()
+        if reply == "ok":
+            return True
+        else:
+            return False
 
     def query_freq(self):
-        self._send("")
+        self._send("f?")
+        return self.ser.readline().decode()
 
     def set_voltage(self, voltage):
-        self._send("v!" + voltage)
+        self._send("v!".encode + voltage.encode())
 
     def query_voltage(self):
         self._send("v?")
@@ -126,6 +132,11 @@ class PlasmaSerialInterface:
             send_flag = 1
 
         self._send("mf"+str(send_flag))
+        reply = self.ser.readline()
+        if reply.strip() == b"1":
+            return True
+        elif reply.strip() == b"0":
+            return False
     
     def set_auto_voltage(self, new_setting):
         send_flag = 0
