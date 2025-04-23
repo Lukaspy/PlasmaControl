@@ -9,4 +9,6 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = GUILogic()
     window.show()
-    sys.exit(app.exec())
+    ret = app.exec()
+    window.shutdown_system()
+    sys.exit(ret)

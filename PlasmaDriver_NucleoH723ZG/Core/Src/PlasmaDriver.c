@@ -2197,6 +2197,7 @@ static void PlasmaDriverMenu(void)
 		//'~' sent by gui program to signify remote control
 		else if (input == '~')
 		{
+			printString("~");
 			remoteControl();
 		}
 		//Test mode action

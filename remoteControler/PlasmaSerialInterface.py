@@ -29,7 +29,6 @@ class PlasmaSerialInterface:
         self.ser.reset_input_buffer()
 
         self._send("~")
-        self._send("~")
         data = self.ser.readline()
 
         if not data:

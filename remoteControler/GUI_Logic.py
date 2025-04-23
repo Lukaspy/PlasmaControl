@@ -239,6 +239,13 @@ class GUILogic(QMainWindow, Ui_MainWindow):
 
         self.data_logging_allowed = True
         self.checkbox_toggled("Data Logging", state)
+        
+    """Shuts down plasma and power supplies, leaving system in a known state on exit"""
+    def shutdown_system(self):
+        self.handle_power_off()
+        self.handle_enable_auto_frequency_correction(True)
+        self.handle_enable_auto_voltage_correction(False)
+
             
     
     ## Placeholder methods before interation layer control
