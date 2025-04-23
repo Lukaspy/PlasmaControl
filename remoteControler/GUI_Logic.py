@@ -89,6 +89,7 @@ class GUILogic(QMainWindow, Ui_MainWindow):
 
     def live_plot(self, plotting_flag):
         #TODO: update a matplotlib plot from csv
+        return
         with open(self.data_logging_save_location, 'r') as file:
             while not self.stop_event.is_set():
                 new_line = file.readline()
@@ -123,7 +124,7 @@ class GUILogic(QMainWindow, Ui_MainWindow):
 
         ## TODO Change system indicators to update on ADC measurment not button press
 
-        #start datalogging/supply voltage updates
+        #start data plotting/supply voltage updates
         self.logging_thread = threading.Thread(target=self.live_plot, args=(self.enable_data_logging.isChekced))
         self.logging_thread.start()
 
