@@ -45,29 +45,35 @@ class Ui_MainWindow(object):
         self.stop_plasma = QPushButton(self.frame_q1)
         self.stop_plasma.setObjectName(u"stop_plasma")
         self.stop_plasma.setGeometry(QRect(230, 210, 111, 28)) # Position
-        self.strike_plasma = QPushButton(self.frame_q1)
+        self.stop_plasma.setText(QCoreApplication.translate("MainWindow", u"Stop Plasma", None))
 
+        self.strike_plasma = QPushButton(self.frame_q1)
         self.strike_plasma.setObjectName(u"strike_plasma")
         self.strike_plasma.setGeometry(QRect(230, 170, 111, 28)) # Position
+        self.strike_plasma.setText(QCoreApplication.translate("MainWindow", u"Strike Plasma", None))
         
         # Adding power on and power off buttons
         self.power_on = QPushButton(self.frame_q1)
         self.power_on.setObjectName(u"power_on")
         self.power_on.setGeometry(QRect(40, 170, 111, 28)) # Position
+        self.power_on.setText(QCoreApplication.translate("MainWindow", u"Power On", None))
 
         self.power_off = QPushButton(self.frame_q1)
         self.power_off.setObjectName(u"power_off")
         self.power_off.setGeometry(QRect(40, 210, 111, 28)) # Position
+        self.power_off.setText(QCoreApplication.translate("MainWindow", u"Power Off", None))
         
         # Labels for system and plasma status indicators
         self.label_system_status = QLabel(self.frame_q1)
         self.label_system_status.setObjectName(u"label_system_status") # Position
         self.label_system_status.setGeometry(QRect(41, 0, 91, 16))
+        self.label_system_status.setText(QCoreApplication.translate("MainWindow", u"System Status:", None))
 
         self.label_plasma_status = QLabel(self.frame_q1)
         self.label_plasma_status.setObjectName(u"label_plasma_status")
         self.label_plasma_status.setGeometry(QRect(230, 0, 91, 16)) # Position
         self.label_system_status_value = QLabel(self.frame_q1)
+        self.label_plasma_status.setText(QCoreApplication.translate("MainWindow", u"Plasma Status:", None))
 
         # System and plasma status value labels (off by default)
         self.label_system_status_value.setObjectName(u"label_system_status_value") # Position
@@ -125,7 +131,7 @@ class Ui_MainWindow(object):
         self.enable_auto_voltage_correction = QCheckBox(self.frame_q3)
         self.enable_auto_voltage_correction.setObjectName(u"enable_auto_voltage_correction")
         self.enable_auto_voltage_correction.setGeometry(QRect(10, 10, 181, 20)) # Position
-        self.enable_auto_voltage_correction.setChecked(True)
+        self.enable_auto_voltage_correction.setChecked(False)
 
         # Groupbox for manual controls
         self.group_manual_controls = QGroupBox(self.frame_q3)
@@ -162,6 +168,7 @@ class Ui_MainWindow(object):
         self.group_data_logging = QGroupBox(self.frame_q3)
         self.group_data_logging.setObjectName(u"group_data_logging")
         self.group_data_logging.setGeometry(QRect(10, 120, 191, 121)) # Position
+        self.label_live_data_plotting.setText(QCoreApplication.translate("MainWindow", u"Live Data Plotting", None))
 
         # Labels and inputs for data logging
 
@@ -210,15 +217,63 @@ class Ui_MainWindow(object):
         self.line_2.setFrameShadow(QFrame.Shadow.Sunken)
 
         # Labels for supply voltage/temperature readouts
-        ##TODO Implement supply voltage readout
-        ##TODO Implement temperature readout
         self.label_supply_voltage_readout = QLabel(self.frame_q4)
         self.label_supply_voltage_readout.setObjectName(u"label_supply_voltage_readout")
         self.label_supply_voltage_readout.setGeometry(QRect(30, 10, 141, 16)) # Position
+        self.label_supply_voltage_readout.setText(QCoreApplication.translate("MainWindow", u"Supply Voltage Readouts:", None))
+
+        # 3.3V Readouts
+        self.label_3_3V_supply_readout = QLabel(self.frame_q4)
+        self.label_3_3V_supply_readout.setObjectName(u"label_3_3V_supply_readout")
+        self.label_3_3V_supply_readout.setGeometry(QRect(40, 40, 141, 16)) # Position
+        self.label_3_3V_supply_readout.setText(QCoreApplication.translate("MainWindow", u"3.3 V Supply Voltage:", None))
+
+        self._3_3V_supply_readout = QLineEdit(self.frame_q4)
+        self._3_3V_supply_readout.setObjectName(u"_3_3V_supply_readout")
+        self._3_3V_supply_readout.setGeometry(QRect(40, 70, 111, 22)) # Position
+        self._3_3V_supply_readout.setReadOnly(True)  # Make it uneditable, just for displaying voltage value
+
+        self.label_3_3_voltage_unit = QLabel(self.frame_q4)
+        self.label_3_3_voltage_unit.setObjectName(u"label_3_3_voltage_unit")
+        self.label_3_3_voltage_unit.setGeometry(QRect(161, 70, 20, 20)) # Position
+        self.label_3_3_voltage_unit.setText(QCoreApplication.translate("MainWindow", u"V", None))
+
+        # 15V Readouts
+        self.label_15_supply_readout = QLabel(self.frame_q4)
+        self.label_15_supply_readout.setObjectName(u"label_15_supply_readout")
+        self.label_15_supply_readout.setGeometry(QRect(40, 110, 141, 22)) # Position
+        self.label_15_supply_readout.setText(QCoreApplication.translate("MainWindow", u"15 V Supply Voltage:", None))
+
+        self._15V_supply_readout = QLineEdit(self.frame_q4)
+        self._15V_supply_readout.setObjectName(u"_15V_supply_readout")
+        self._15V_supply_readout.setGeometry(QRect(40, 140, 111, 22)) # Position
+        self._15V_supply_readout.setReadOnly(True)  # Make it uneditable, just for displaying voltage value
+
+        self.label_15_voltage_unit = QLabel(self.frame_q4)
+        self.label_15_voltage_unit.setObjectName(u"label_15_voltage_unit")
+        self.label_15_voltage_unit.setGeometry(QRect(161, 140, 20, 20)) # Position
+        self.label_15_voltage_unit.setText(QCoreApplication.translate("MainWindow", u"V", None))
+
+        # High Voltage Readouts
+        self.label_high_V_supply_readout = QLabel(self.frame_q4)
+        self.label_high_V_supply_readout.setObjectName(u"label_high_V_supply_readout")
+        self.label_high_V_supply_readout.setGeometry(QRect(40, 180, 141, 22)) # Position
+        self.label_high_V_supply_readout.setText(QCoreApplication.translate("MainWindow", u"High V Supply Voltage:", None))
+
+        self.high_V_supply_readout = QLineEdit(self.frame_q4)
+        self.high_V_supply_readout.setObjectName(u"high_V_supply_readout")
+        self.high_V_supply_readout.setGeometry(QRect(40, 210, 111, 22)) # Position
+        self.high_V_supply_readout.setReadOnly(True)  # Make it uneditable, just for displaying voltage value
+
+        self.label_high_voltage_unit = QLabel(self.frame_q4)
+        self.label_high_voltage_unit.setObjectName(u"label_high_voltage_unit")
+        self.label_high_voltage_unit.setGeometry(QRect(161, 210, 20, 20)) # Position
+        self.label_high_voltage_unit.setText(QCoreApplication.translate("MainWindow", u"V", None))
 
         self.label_temperature_readout = QLabel(self.frame_q4)
         self.label_temperature_readout.setObjectName(u"label_temperature_readout")
         self.label_temperature_readout.setGeometry(QRect(230, 10, 131, 16)) # Position
+        self.label_temperature_readout.setText(QCoreApplication.translate("MainWindow", u"Temperature Readouts:", None))
         
         MainWindow.setCentralWidget(self.centralwidget)
         self.frame_q1.raise_()
@@ -245,17 +300,11 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
-        self.version_history.setText(QCoreApplication.translate("MainWindow", u"Plasma Control Team Version 0.2", None))
-        self.stop_plasma.setText(QCoreApplication.translate("MainWindow", u"Stop Plasma", None))
-        self.strike_plasma.setText(QCoreApplication.translate("MainWindow", u"Strike Plasma", None))
-        self.power_on.setText(QCoreApplication.translate("MainWindow", u"Power On", None))
-        self.power_off.setText(QCoreApplication.translate("MainWindow", u"Power Off", None))
-        self.label_system_status.setText(QCoreApplication.translate("MainWindow", u"System Status:", None))
-        self.label_plasma_status.setText(QCoreApplication.translate("MainWindow", u"Plasma Status:", None))
+        self.version_history.setText(QCoreApplication.translate("MainWindow", u"Plasma Control Team Version 1.1", None))
         self.label_system_status_value.setText(QCoreApplication.translate("MainWindow", u"Off", None))
         self.label_plasma_status_value.setText(QCoreApplication.translate("MainWindow", u"Off", None))
         self.group_manual_controls.setTitle(QCoreApplication.translate("MainWindow", u"Manual Control Values (Disable parameter auto-correction.)", None))
-        self.label_voltage_value.setText(QCoreApplication.translate("MainWindow", u"Enter Voltage Value 200-500 V", None))
+        self.label_voltage_value.setText(QCoreApplication.translate("MainWindow", u"Enter Voltage Value 200-400 V", None))
         self.label_frequency_value.setText(QCoreApplication.translate("MainWindow", u"Enter Frequency Value 20-50 kHz", None))
         self.label_voltage_unit.setText(QCoreApplication.translate("MainWindow", u"V", None))
         self.label_frequency_unit.setText(QCoreApplication.translate("MainWindow", u"kHz", None))
@@ -265,10 +314,11 @@ class Ui_MainWindow(object):
         self.group_other.setTitle(QCoreApplication.translate("MainWindow", u"Other Settings", None))
         self.enable_auto_frequency_correction.setText(QCoreApplication.translate("MainWindow", u"Auto Frequency Correction", None))
         self.enable_auto_voltage_correction.setText(QCoreApplication.translate("MainWindow", u"Auto Voltage Correction", None))
-        self.label_live_data_plotting.setText(QCoreApplication.translate("MainWindow", u"Live Data Plotting", None))
+
+        
         #self.label_duty_cycle_value.setText(QCoreApplication.translate("MainWindow", u"Enter Duty Cycle Value", None))
         #self.label_duty_cycle_unit.setText(QCoreApplication.translate("MainWindow", u"%", None))
-        self.label_supply_voltage_readout.setText(QCoreApplication.translate("MainWindow", u"Supply Voltage Readout", None))
-        self.label_temperature_readout.setText(QCoreApplication.translate("MainWindow", u"Temperature Readout", None))
+        
+        
     # retranslateUi
 
