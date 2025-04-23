@@ -11,6 +11,17 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
 from PySide6.QtWidgets import (QApplication, QCheckBox, QFrame, QGroupBox,
     QLabel, QLineEdit, QMainWindow, QMenuBar,
     QPushButton, QSizePolicy, QStatusBar, QWidget)
+from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as FigureCanvas
+from matplotlib.figure import Figure
+import numpy as np
+
+# Class for Matplotlib integration
+class MplCanvas(FigureCanvas):
+    def __init__(self, parent=None, width=4, height=3, dpi=100):
+        fig = Figure(figsize=(width, height), dpi=dpi)
+        self.axes = fig.add_subplot(111)
+        super().__init__(fig)
+        self.setParent(parent)
 
 # Ui_MainWindow defines the layout and components of the main window
 class Ui_MainWindow(object):
@@ -113,8 +124,19 @@ class Ui_MainWindow(object):
         self.label_live_data_plotting.setObjectName(u"label_live_data_plotting")
         self.label_live_data_plotting.setGeometry(QRect(140, 0, 101, 20)) # Position
 
-        ##TODO Implement live date plotting
-        
+        #Live date plotting
+        self.canvas = MplCanvas(self.frame_q2, width=4, height=3, dpi=100)
+        self.canvas.setGeometry(QRect(10, 30, 361, 211))
+
+        # Test: plot a sine wave
+        x = np.linspace(0, 2 * np.pi, 200)
+        y = np.sin(x)
+        self.canvas.axes.plot(x, y)
+        self.canvas.axes.set_title("Test Sine Wave")
+        self.canvas.axes.set_xlabel("x")
+        self.canvas.axes.set_ylabel("sin(x)")
+        self.canvas.draw()
+
         # Frame containing settings
         self.frame_q3 = QFrame(self.centralwidget)
         self.frame_q3.setObjectName(u"frame_q3")
