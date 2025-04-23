@@ -328,7 +328,7 @@ static void programHbridge()
 	float timARR_f;
 	uint32_t value_int;
 	uint32_t timARR, timCCR1, timBDTR;
-	char s_output[100];
+	//char s_output[100];
 
 	//HAL_GPIO_WritePin(TEST_OUTPUT_GPIO_Port, TEST_OUTPUT_Pin, GPIO_PIN_SET);
 
@@ -1228,7 +1228,7 @@ char PowerOffLowSupplies_rc(void)
  */
 char PowerOffHighSupplies(void)
 {
-	char status;
+
 	//Make sure the H-bridge outputs are zero before turning off power
 	stopHbridge();
 
@@ -1929,6 +1929,39 @@ static char toggleSupply(char *input) {
 	return status;
 }
 
+/**
+ * REMOTE CONTROL UART GLOBALS *
+ */
+
+#define RX_BUFFER_SIZE 10
+volatile uint8_t uart_rx_flag = 0;
+volatile uint8_t command_ready = 0;
+uint8_t rx_byte;
+char command_buffer[RX_BUFFER_SIZE];
+uint8_t command_index = 0;
+
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+	if (huart->Instance == USART3){
+		if (!command_ready) {
+			if (rx_byte == '\r') {
+				command_buffer[command_index] = '\0';
+				command_ready = 1;
+				command_index = 0;
+			} else {
+				if (command_index < RX_BUFFER_SIZE - 1) {
+					command_buffer[command_index++] = rx_byte;
+				} else {
+					command_index = 0; //Buffer overflow. Likely recieving garbage
+				}
+			}
+		}
+
+		HAL_UART_Receive_IT(&huart3, &rx_byte, 1);
+
+	}
+}
+
 
 /**
  * This routine is entered when the remote control signal is received
@@ -1937,161 +1970,141 @@ static char toggleSupply(char *input) {
 static void remoteControl()
 {
 	rc_state current_state = init_rc_state();
+	HAL_UART_Receive_IT(&huart3, &rx_byte, 1); //Starts the uart interrupt which calls the HAL_UART_RxCpltCallback() function
 
 	while (1)
 	{
 
-		char inchar;
-		char input[MAX_INPUT];
-		int pos = 0;
+
 		//Check for input and update state accordingly
-		if (HAL_UART_Receive(&huart3, (uint8_t *) &inchar, 1, 100000) == HAL_OK)
+		if (command_ready)
 		{
-			while (inchar != 13) //continue to grab input chars until LF (\r) is found
+			char* input = command_buffer;
+			switch (input[0])
 			{
-
-				//store input char
-				input[pos++] = inchar;
-
-
-				// Get next character
-				if (pos < MAX_INPUT-1)
-				{
-					HAL_UART_Receive(&huart3, (uint8_t *) &inchar, 1, 100000);
-				}
-				else
-				{
-					inchar = 13; // Terminate while loop
-				}
-
-			}
-			input[pos] = '\0';
-		}
-		switch (input[0])
-		{
-		//Initialization Query
-		case '~':
-			init_rc();
-			break;
-
-			//power supply related query/command
-		case 'p':
-			char supply[3];
-			supply[0] = input[2];
-			supply[1] = input[3];
-			supply[2] = input[4];
-			if (input[1] == '?')
-			{
-				querySupply(supply);
-			} else if (input[1] ==  '!')
-			{
-				if (toggleSupply(supply)) {
-					printString("on");
-				} else {
-					printString("off");
-				}
-			}
-			break;
-
-			//start plasma related command
-		case 's':
-
-			//Query plasma status
-			if (input[1] == '?') {
-				if (current_state.state != IDLE) {
-					printString("on");
-				} else {
-					printString("off");
-				}
-			} else if (input[1] == '!') { //Toggle plasma state
-				if (current_state.state == IDLE) {
-					current_state.state = STRIKE;
-				} else {
-					current_state.state = STOP;
-				}
-			}
-
-			break;
-
-			//query/modify deadtime
-		case 'd':
-
-			if (input[1] == '?'){
-				char output[2];
-				sprintf(output, "%d", sHbridge.deadtime);
-				printString(output);
+			//Initialization Query
+			case '~':
+				init_rc();
 				break;
-			} else if (input[1] == '!') {
 
-				//Convert the string deadtime % input into an integer
-				int new_deadtime;
-				for (int i = 2; i < strlen(input)-2; i++) {
-					new_deadtime += i * atoi(input[i]);
+				//power supply related query/command
+			case 'p':
+				char supply[3];
+				supply[0] = input[2];
+				supply[1] = input[3];
+				supply[2] = input[4];
+				if (input[1] == '?')
+				{
+					querySupply(supply);
+				} else if (input[1] ==  '!')
+				{
+					if (toggleSupply(supply)) {
+						printString("on");
+					} else {
+						printString("off");
+					}
+				}
+				break;
+
+				//start plasma related command
+			case 's':
+
+				//Query plasma status
+				if (input[1] == '?') {
+					if (current_state.state != IDLE) {
+						printString("on");
+					} else {
+						printString("off");
+					}
+				} else if (input[1] == '!') { //Toggle plasma state
+					if (current_state.state == IDLE) {
+						current_state.state = STRIKE;
+					} else {
+						current_state.state = STOP;
+					}
 				}
 
-				sHbridge.deadtime = new_deadtime;
-				programHbridge();
-			}
-			break;
+				break;
 
-			//query/set voltage
-		case 'v':
-			if (input[1] == '?') {
-				char output[10];
-				sprintf(output, "%d", current_state.voltage);
-				printString(output);
-			} else {
-				int i = 1;
-				int new_voltage;
-				//read new voltage from input
-				while (input[i] != '\0') {
-					new_voltage += i * atoi(input[i]);
+				//query/modify deadtime
+			case 'd':
+
+				if (input[1] == '?'){
+					char output[15];
+					sprintf(output, "%d", sHbridge.deadtime);
+					printString(output);
+					break;
+				} else if (input[1] == '!') {
+
+					//Convert the string deadtime % input into an integer
+					int new_deadtime;
+					for (int i = 2; i < strlen(input)-2; i++) {
+						new_deadtime += i * atoi(input[i]);
+					}
+
+					sHbridge.deadtime = new_deadtime;
+					programHbridge();
 				}
-				current_state.voltage = new_voltage;
-			}
+				break;
 
-			break;
-
-			//query/set frequency
-		case 'f':
-			if (input[1] == '?') {
-				char output[16];
-				sprintf(output, "%d", sHbridge.frequency);
-				printString(output);
-			} else if (input[1] == '!'){
-				//read new freq from input
-				int i = 2;
-				char new_freq[16];
-				while (input[i] != '\0') {
-					new_freq[i-2] = input[i];
-					i++;
+				//query/set voltage
+			case 'v':
+				if (input[1] == '?') {
+					char output[10];
+					sprintf(output, "%d", current_state.voltage);
+					printString(output);
+				} else {
+					int i = 1;
+					int new_voltage;
+					//read new voltage from input
+					while (input[i] != '\0') {
+						new_voltage += i * atoi(input[i]);
+					}
+					current_state.voltage = new_voltage;
 				}
-				int new_freq_int = atoi(new_freq);
-				sHbridge.frequency = new_freq_int;
-				programHbridge();
-				printString("ok");
-			}
 
-			break;
+				break;
 
-			//query adc 3 (supplies/temp)
-		case 'a':
-			//TODO: this needs to use a modified function that prints csv format
-			printADC3data();
-			break;
+				//query/set frequency
+			case 'f':
+				if (input[1] == '?') {
+					char output[16];
+					sprintf(output, "%d", sHbridge.frequency);
+					printString(output);
+				} else if (input[1] == '!'){
+					//read new freq from input
+					int i = 2;
+					char new_freq[16];
+					while (input[i] != '\0') {
+						new_freq[i-2] = input[i];
+						i++;
+					}
+					int new_freq_int = atoi(new_freq);
+					sHbridge.frequency = new_freq_int;
+					programHbridge();
+					printString("ok");
+				}
 
-			//modify datalogging flag
-		case 'l':
-			//Enable or disable datalogging flag in struct
-			if (input[1] == '1') {
-				current_state.logging = 1;
-			} else if (input[1] == '0') {
-				current_state.logging = 0;
-			}
-			break;
+				break;
 
-		case 'm': //modify auto_freq/auto_voltage flags
-			switch (input[1]) {
+				//query adc 3 (supplies/temp)
+			case 'a':
+				//TODO: this needs to use a modified function that prints csv format
+				printADC3data();
+				break;
+
+				//modify datalogging flag
+			case 'l':
+				//Enable or disable datalogging flag in struct
+				if (input[1] == '1') {
+					current_state.logging = 1;
+				} else if (input[1] == '0') {
+					current_state.logging = 0;
+				}
+				break;
+
+			case 'm': //modify auto_freq/auto_voltage flags
+				switch (input[1]) {
 				case 'f':
 					//Turn on auto frequency adjustment
 					if (input[2] == '1'){
@@ -2114,65 +2127,57 @@ static void remoteControl()
 						printString("0");
 					}
 					break;
+				}
+
+				break;
+
+
+				//Stop plasma (can also be stopped by toggling using 's!'
+				case 'q':
+					current_state.state = STOP;
+					break;
+
 			}
+
+
+		}
+
+		//Act on current state
+		switch (current_state.state) {
+		case IDLE:
 
 			break;
 
+		case STOP:
+			stop_plasma();
+			break;
 
-			//Stop plasma (can also be stopped by toggling using 's!'
-		case 'q':
-			current_state.state = STOP;
+		case STRIKE:
+			start_plasma(current_state.logging);
+			current_state.state = ACTIVE;
+			break;
+
+		case ACTIVE:
+			//This period will be logged (i.e. 'logging_rate' periods have passed since last log update
+			if (current_state.rate_counter == current_state.log_rate) {
+				adjust_plasma(current_state.logging, current_state.voltage);
+				current_state.rate_counter = 0;
+			} else if (current_state.rate_counter != current_state.log_rate) {
+				adjust_plasma(0, current_state.voltage);
+			}
+
+
+			//if a logging rate is specified, the couter is updated. other wise the counter remains at zero
+			if (current_state.log_rate != 0) {
+				current_state.rate_counter++;
+			}
+			break;
 
 		}
 
 
 	}
-
-	//Act on current state
-	switch (current_state.state) {
-	case IDLE:
-
-		break;
-
-	case STOP:
-		stop_plasma();
-		break;
-
-	case STRIKE:
-		start_plasma(current_state.logging);
-		current_state.state = ACTIVE;
-		break;
-
-	case ACTIVE:
-		//This period will be logged (i.e. 'logging_rate' periods have passed since last log update
-		if (current_state.rate_counter == current_state.log_rate) {
-			adjust_plasma(current_state.logging, current_state.voltage);
-			current_state.rate_counter = 0;
-		} else if (current_state.rate_counter != current_state.log_rate) {
-			adjust_plasma(0, current_state.voltage);
-		}
-
-
-		//if a logging rate is specified, the couter is updated. other wise the counter remains at zero
-		if (current_state.log_rate != 0) {
-			current_state.rate_counter++;
-		}
-		break;
-
-	}
-
-
 }
-
-
-
-
-
-
-
-
-
-
 
 
 
