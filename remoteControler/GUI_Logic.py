@@ -112,21 +112,21 @@ class GUILogic(QMainWindow, Ui_MainWindow):
 
             #start the plasma thread in the background
             self.stop_event.clear()
-            self.plasma_thread = threading.Thread(target=self.plasma_interface.start_plasma, args=(self.enable_data_logging.isChecked,\
-                self.enable_auto_voltage_correction.isChecked, self.enable_auto_frequency_correction.isChecked, self.stop_event, self.manual_voltage_selection, self.manual_frequency_selection, self.save_location), daemon=True)
+            self.plasma_thread = threading.Thread(target=self.plasma_interface.start_plasma, args=(self.enable_data_logging.isChecked(),\
+                self.enable_auto_voltage_correction.isChecked(), self.enable_auto_frequency_correction.isChecked(), self.stop_event, self.manual_voltage_selection.text(), self.manual_frequency_selection.text(), self.save_location), daemon=True)
             
             self.plasma_thread.start()
         
         except Exception as e:
-            self.show_warning_popup("Failed to start plasma: " + str(e))
             self.handle_plasma_off()
+            self.show_warning_popup("Failed to start plasma: " + str(e))
             return
 
         ## TODO Change system indicators to update on ADC measurment not button press
 
         #start data plotting/supply voltage updates
-        self.logging_thread = threading.Thread(target=self.live_plot, args=(self.enable_data_logging.isChekced))
-        self.logging_thread.start()
+        #self.logging_thread = threading.Thread(target=self.live_plot, args=(self.enable_data_logging.isChecked))
+        #self.logging_thread.start()
 
         self.led_plasma_status.setStyleSheet("background-color: green; border-radius: 40px;")
         self.label_plasma_status_value.setText("On")

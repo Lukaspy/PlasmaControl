@@ -34,6 +34,11 @@ class PlasmaSerialInterface:
         if not data:
             return False
         
+        #put system in known state
+        self.set_auto_freq(True)
+        self.set_auto_voltage(False)
+        self.set_datalogging(False)
+        
         self.initialized = True
         return True
     
@@ -46,7 +51,7 @@ class PlasmaSerialInterface:
 
         reply = self.ser.readline()
 
-        if reply == "on":
+        if reply == b"on":
             return True
         else:
             return False
@@ -59,7 +64,7 @@ class PlasmaSerialInterface:
 
         reply = self.ser.readline()
 
-        if reply == "on":
+        if reply == b"on":
             return True
         else:
             return False
@@ -72,7 +77,7 @@ class PlasmaSerialInterface:
 
         reply = self.ser.readline()
 
-        if reply == "on":
+        if reply == b"on":
             return True
         else:
             return False
@@ -144,6 +149,15 @@ class PlasmaSerialInterface:
             send_flag = 1
 
         self._send("mv"+str(send_flag))
+        
+
+    def set_datalogging(self, new_setting):
+        send_flag = 0
+
+        if new_setting:
+            send_flag = 1
+
+        self._send("l"+str(send_flag))
 
 
 
@@ -152,34 +166,25 @@ class PlasmaSerialInterface:
         """Activates the plasma depending on the boolean flag parameters"""
 
         if not self.query_hv_supply() or not self.query_15_supply() or not self.query_3_3_supply():
-            raise PlasmaException('Supplies not on!')
+            raise PlasmaException.PlasmaException('Supplies not on!')
         
         if not datalog_flag:
-            if not auto_freq_flag and not auto_voltage_flag:
-               #TODO: Figure out what syntax should be for manual control
-               raise PlasmaException("Not Implemented")
-            if not auto_voltage_flag and auto_freq_flag:
-                self.set_voltage("-1")
-                self._send("s!")
+            self._send("s!")
             
         else:
             try:
                 file = open(datalog_filepath, 'wb')
             except:
                 raise IOError
-                
-
-            self._send("s!")
 
             self.ser.reset_input_buffer()
+            self._send("s!")
 
-
-
-        with open(datalog_filepath, 'wb') as file:
-            while not stop_event.is_set():
-                data = self.ser.readline()
-                file.write(data)
-                file.flush()
+            with open(datalog_filepath, 'wb') as file:
+                while not stop_event.is_set():
+                    data = self.ser.readline()
+                    file.write(data)
+                    file.flush()
         
         #now shutting down the plasma
         self._send("q")
