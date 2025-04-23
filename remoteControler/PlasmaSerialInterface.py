@@ -106,7 +106,7 @@ class PlasmaSerialInterface:
             return False
 
     def set_freq(self, freq):
-        self._send("f!"+str(float(freq)*1000))
+        self._send("f!"+str(round(float(freq)*1000)))
         reply = self.ser.readline().strip().decode()
         if reply == "ok":
             return True

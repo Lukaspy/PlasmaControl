@@ -173,6 +173,8 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         if not self.plasma_interface.set_freq(self.manual_frequency_selection.text()):
             self.handle_power_off()
             self.show_warning_popup("Error writing frequency. Shutting down system")
+            
+        self.manual_frequency_selection.setText(str(round(float(self.manual_frequency_selection.text()), 3))) #round to the nearest Hz
 
     
     def handle_enable_auto_voltage_correction(self,state):
