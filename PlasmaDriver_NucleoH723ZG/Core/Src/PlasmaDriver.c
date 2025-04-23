@@ -1979,6 +1979,7 @@ static void remoteControl()
 		//Check for input and update state accordingly
 		if (command_ready)
 		{
+			command_ready = 0;
 			char* input = command_buffer;
 			switch (input[0])
 			{
