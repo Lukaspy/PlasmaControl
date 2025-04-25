@@ -1801,7 +1801,10 @@ void start_plasma(char log_flag) {
 		printCR();
 	}
 
-	PowerOnHighSupplies();
+	if (!supply_status.sHV) {
+		printString("fail");
+		return;
+	}
 
 	sHbridge.deadtime = 1;
 	sHbridge.frequency = 45000;
@@ -2151,6 +2154,7 @@ static void remoteControl()
 
 		case STOP:
 			stop_plasma();
+			current_state.state = IDLE;
 			break;
 
 		case STRIKE:
@@ -2160,15 +2164,17 @@ static void remoteControl()
 
 		case ACTIVE:
 			//This period will be logged (i.e. 'logging_rate' periods have passed since last log update
-			if (current_state.rate_counter == current_state.log_rate) {
-				adjust_plasma(current_state.logging, current_state.voltage);
-				current_state.rate_counter = 0;
-			} else if (current_state.rate_counter != current_state.log_rate) {
-				adjust_plasma(0, current_state.voltage);
+			if (current_state.auto_freq == 1) {
+				if (current_state.rate_counter == current_state.log_rate) {
+					adjust_plasma(current_state.logging, current_state.voltage);
+					current_state.rate_counter = 0;
+				} else if (current_state.rate_counter != current_state.log_rate) {
+					adjust_plasma(0, current_state.voltage);
+				}
 			}
 
 
-			//if a logging rate is specified, the couter is updated. other wise the counter remains at zero
+			//if a logging rate is specified, the counter is updated. other wise the counter remains at zero
 			if (current_state.log_rate != 0) {
 				current_state.rate_counter++;
 			}

@@ -58,7 +58,7 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         if self.system_on:
             return
         
-        if (not self.plasma_interface.toggle_low_voltage() or not self.plasma_interface.toggle_high_voltage()):
+        if (not self.plasma_interface.toggle_low_voltage()):
             print("Power on unsucessful")
             return
 
@@ -74,7 +74,7 @@ class GUILogic(QMainWindow, Ui_MainWindow):
             return
         self.handle_plasma_off()
 
-        if (self.plasma_interface.toggle_high_voltage() or self.plasma_interface.toggle_low_voltage()):
+        if (self.plasma_interface.toggle_low_voltage()):
             print("system is in undefined state. Power off unsuccessful")
             return
 
@@ -108,12 +108,12 @@ class GUILogic(QMainWindow, Ui_MainWindow):
             self.show_warning_popup("Please ensure system is powered on before attempting to strike a plasma.")
             return
 
+
         try:
 
             #start the plasma thread in the background
             self.stop_event.clear()
-            self.plasma_thread = threading.Thread(target=self.plasma_interface.start_plasma, args=(self.enable_data_logging.isChecked(),\
-                self.enable_auto_voltage_correction.isChecked(), self.enable_auto_frequency_correction.isChecked(), self.stop_event, self.manual_voltage_selection.text(), self.manual_frequency_selection.text(), self.save_location), daemon=True)
+            self.plasma_thread = threading.Thread(target=self.plasma_interface.start_plasma, args=(self.enable_data_logging.isChecked(), self.enable_auto_voltage_correction.isChecked(), self.enable_auto_frequency_correction.isChecked(), self.stop_event, self.manual_voltage_selection.text(), self.manual_frequency_selection.text(), self.save_location), daemon=True)
             
             self.plasma_thread.start()
         
@@ -135,9 +135,9 @@ class GUILogic(QMainWindow, Ui_MainWindow):
     def handle_plasma_off(self):
         ## TODO Change system indicators to update on ADC measurment not button press
         if self.plasma_thread is not None and self.plasma_thread.is_alive():
-            self.stop_plasma.set()
+            self.stop_event.set()
             self.plasma_thread.join()
-        
+            
         self.led_plasma_status.setStyleSheet("background-color: red; border-radius: 40px;")
         self.label_plasma_status_value.setText("Off")
 

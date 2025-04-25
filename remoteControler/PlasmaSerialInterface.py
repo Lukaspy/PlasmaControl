@@ -165,11 +165,17 @@ class PlasmaSerialInterface:
     def start_plasma(self, datalog_flag, auto_voltage_flag, auto_freq_flag, stop_event, voltage=-1, manual_freq=30000,  datalog_filepath=""):
         """Activates the plasma depending on the boolean flag parameters"""
 
-        if not self.query_hv_supply() or not self.query_15_supply() or not self.query_3_3_supply():
-            raise PlasmaException.PlasmaException('Supplies not on!')
+        if not self.query_15_supply() or not self.query_3_3_supply():
+            raise PlasmaException.PlasmaException('Low Voltage Supplies not on!')
+        
+        if not self.toggle_high_voltage():
+            raise PlasmaException.PlasmaException("High voltage in unknown state!")
+            self.system_shutdown()
         
         if not datalog_flag:
             self._send("s!")
+            while not stop_event.is_set():
+                continue
             
         else:
             try:
