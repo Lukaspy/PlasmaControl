@@ -159,6 +159,10 @@ class PlasmaSerialInterface:
 
         self._send("l"+str(send_flag))
 
+    """Send the system shutdown command. Stops plasma (if running) shutsdown all supplies"""
+    def system_shutdown(self):
+        self._send("z")
+
 
 
 

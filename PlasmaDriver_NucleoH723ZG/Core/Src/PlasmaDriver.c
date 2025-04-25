@@ -2141,6 +2141,10 @@ static void remoteControl()
 					current_state.state = STOP;
 					break;
 
+				case 'z':
+					stop_plasma();
+					power_down();
+
 			}
 
 
