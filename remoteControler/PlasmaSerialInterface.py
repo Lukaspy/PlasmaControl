@@ -173,8 +173,8 @@ class PlasmaSerialInterface:
             raise PlasmaException.PlasmaException('Low Voltage Supplies not on!')
         
         if not self.toggle_high_voltage():
-            raise PlasmaException.PlasmaException("High voltage in unknown state!")
             self.system_shutdown()
+            raise PlasmaException.PlasmaException("High voltage in unknown state!")
         
         if not datalog_flag:
             self._send("s!")

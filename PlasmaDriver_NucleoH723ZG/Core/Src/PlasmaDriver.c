@@ -1724,7 +1724,7 @@ static void TestModeAction(char input)
 /**
  * Auto frequency and voltage adjustment routine modified for remote control via gui
  */
-void adjust_plasma(char log, int voltage)
+void adjust_plasma(char log, int voltage, char auto_freq)
 {
 
 	//Start timer24 which is used to time when each ADC measurement is captured
@@ -1737,26 +1737,27 @@ void adjust_plasma(char log, int voltage)
 	while (sADC.adc12_reading);
 	uint32_t stopTime = __HAL_TIM_GET_COUNTER(&htim24);//TIM24->CNT;
 
+	if (auto_freq == 1) {
+		//Calculate delta f
+		int16_t freqCorr;
+		freqCorrection(&freqCorr);
 
-	//Calculate delta f
-	int16_t freqCorr;
-	freqCorrection(&freqCorr);
 
 
+		if (sHbridge.frequency + freqCorr > MAX_FREQUENCY)
+		{   // Calculated freq is higher than max
+			sHbridge.frequency = MAX_FREQUENCY;
+		}
+		else if (sHbridge.frequency + freqCorr < MIN_FREQUENCY)
+		{
+			sHbridge.frequency = MIN_FREQUENCY;
+		}
+		else
+		{
+			sHbridge.frequency = sHbridge.frequency + freqCorr;
+		}
 
-	if (sHbridge.frequency + freqCorr > MAX_FREQUENCY)
-	{   // Calculated freq is higher than max
-		sHbridge.frequency = MAX_FREQUENCY;
 	}
-	else if (sHbridge.frequency + freqCorr < MIN_FREQUENCY)
-	{
-		sHbridge.frequency = MIN_FREQUENCY;
-	}
-	else
-	{
-		sHbridge.frequency = sHbridge.frequency + freqCorr;
-	}
-
 
 
 	/*
@@ -2143,7 +2144,7 @@ static void remoteControl()
 
 				case 'z':
 					stop_plasma();
-					power_down();
+					PowerOffLowSupplies_rc();
 
 			}
 
@@ -2168,14 +2169,14 @@ static void remoteControl()
 
 		case ACTIVE:
 			//This period will be logged (i.e. 'logging_rate' periods have passed since last log update
-			if (current_state.auto_freq == 1) {
-				if (current_state.rate_counter == current_state.log_rate) {
-					adjust_plasma(current_state.logging, current_state.voltage);
-					current_state.rate_counter = 0;
-				} else if (current_state.rate_counter != current_state.log_rate) {
-					adjust_plasma(0, current_state.voltage);
-				}
+
+			if (current_state.rate_counter == current_state.log_rate) {
+				adjust_plasma(current_state.logging, current_state.voltage, current_state.auto_freq);
+				current_state.rate_counter = 0;
+			} else if (current_state.rate_counter != current_state.log_rate) {
+				adjust_plasma(0, current_state.voltage, current_state.auto_freq);
 			}
+
 
 
 			//if a logging rate is specified, the counter is updated. other wise the counter remains at zero

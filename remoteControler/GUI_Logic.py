@@ -113,7 +113,9 @@ class GUILogic(QMainWindow, Ui_MainWindow):
 
             #start the plasma thread in the background
             self.stop_event.clear()
-            self.plasma_thread = threading.Thread(target=self.plasma_interface.start_plasma, args=(self.enable_data_logging.isChecked(), self.enable_auto_voltage_correction.isChecked(), self.enable_auto_frequency_correction.isChecked(), self.stop_event, self.manual_voltage_selection.text(), self.manual_frequency_selection.text(), self.save_location), daemon=True)
+            self.plasma_thread = threading.Thread(target=self.plasma_interface.start_plasma, args=(self.data_logging_allowed, \
+                self.enable_auto_voltage_correction.isChecked(), self.enable_auto_frequency_correction.isChecked(), self.stop_event, \
+                self.manual_voltage_selection.text(), self.manual_frequency_selection.text(), self.save_location), daemon=True)
             
             self.plasma_thread.start()
         
@@ -195,16 +197,17 @@ class GUILogic(QMainWindow, Ui_MainWindow):
             self.manual_frequency_selection.clear()
 
     def handle_enable_auto_frequency_correction(self,state):
-        if not state:  # If user is trying to disable auto control
-            try:
-                if not self.manual_frequency_allowed:
-                    self.enable_auto_frequency_correction.setChecked(True)  # Re-enable checkbox
-                    raise ValueError
+        #This block forces user to manually select frequency before disabling autocontrol. Not strictly required
+        #if not state:  # If user is trying to disable auto control
+            #try:
+                #if not self.manual_frequency_allowed:
+                    #self.enable_auto_frequency_correction.setChecked(True)  # Re-enable checkbox
+                    #raise ValueError
                 
 
-            except ValueError:
-                self.show_warning_popup("Please enter a manual control value before disabling auto control.")
-                return
+            #except ValueError:
+                #self.show_warning_popup("Please enter a manual control value before disabling auto control.")
+                #return
 
         self.checkbox_toggled("Frequency Auto Control", state)
 
