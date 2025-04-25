@@ -512,8 +512,9 @@ float convertADC12data(uint32_t item, char **text)
 			break;
 
 		case ADC2_Is:
-			V = 3.3*(((float) sADC.adc12_data[item])/65536.0)*1000;
-			result =  2000*(V - 1.585714)/3.594286; //V;
+			V = 3.3*(((float) sADC.adc12_data[item])/65536.0);
+			result =  50000*(V - 1.585714)/3.594286;
+
 			if (text)
 				*text ="ADC2_Is(mA)";
 			break;
@@ -1783,9 +1784,9 @@ void adjust_plasma(char log, int voltage, char auto_freq)
 
 
 
-		if (sHbridge.frequency + freqCorr > MAX_FREQUENCY)
+		if (sHbridge.frequency + freqCorr > 46000)
 		{   // Calculated freq is higher than max
-			sHbridge.frequency = MAX_FREQUENCY;
+			sHbridge.frequency = 46000;
 		}
 		else if (sHbridge.frequency + freqCorr < MIN_FREQUENCY)
 		{
