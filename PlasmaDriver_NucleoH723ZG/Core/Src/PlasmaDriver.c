@@ -1740,15 +1740,15 @@ void print_supply_voltages_rc() {
 		switch (i)
 		{
 			case ADC3_15V:
-				V15 =  ((30.0+120.0)/30.0)*3.3*(((float) sADC.adc3_data[ADC3_15V])/4096.0);
+				V15 =  1000*((30.0+120.0)/30.0)*3.3*(((float) sADC.adc3_data[ADC3_15V])/4096.0);
 				break;
 
 			case ADC3_3_3V:
-				V3_3 =  ((30.0+3.0)/30.0)*3.3*(((float) sADC.adc3_data[ADC3_3_3V])/4096.0);
+				V3_3 =  1000*((30.0+3.0)/30.0)*3.3*(((float) sADC.adc3_data[ADC3_3_3V])/4096.0);
 				break;
 
 			case ADC3_500VDC:
-				VHVDC =  ((12.0+2000.0)/12.0)*3.3*(((float) sADC.adc3_data[ADC3_500VDC])/4096.0);
+				VHVDC =  1000*((12.0+2000.0)/12.0)*3.3*(((float) sADC.adc3_data[ADC3_500VDC])/4096.0);
 				break;
 		}
 

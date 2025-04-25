@@ -106,9 +106,9 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         voltages = supply_update.split()
         if len(voltages) != 3:
             return
-        self._3_3V_supply_readout.setText(voltages[0].decode().replace(",", ""))
-        self._15V_supply_readout.setText(voltages[1].decode().replace(",", ""))
-        self.high_V_supply_readout.setText(voltages[2].decode())
+        self._3_3V_supply_readout.setText(str(float(voltages[0].decode().replace(",", ""))/1000))
+        self._15V_supply_readout.setText(str(float(voltages[1].decode().replace(",", ""))/1000))
+        self.high_V_supply_readout.setText(str((float(voltages[2].decode()))/1000))
 
 
 
