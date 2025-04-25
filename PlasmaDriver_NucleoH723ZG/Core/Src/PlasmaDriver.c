@@ -1752,9 +1752,10 @@ void print_supply_voltages_rc() {
 				break;
 		}
 
-		sprintf(text, "%7u,%7u,%7u\n\r", (int) V3_3, (int) V15, (int) VHVDC);
-		printString(text);
+
 	}
+	sprintf(text, "%7u,%7u,%7u\n\r", (int) V3_3, (int) V15, (int) VHVDC);
+	printString(text);
 }
 
 

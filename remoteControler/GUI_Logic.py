@@ -2,6 +2,7 @@
 
 import tempfile
 import threading
+import time
 from PySide6.QtWidgets import QMainWindow, QMessageBox, QFileDialog
 from plasma_control_GUI import Ui_MainWindow
 from PlasmaSerialInterface import PlasmaSerialInterface
@@ -22,11 +23,13 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         self.plasma_thread = None
         self.logging_thread = None
         self.stop_event = threading.Event()
+        self.serial_lock = threading.Lock()
+        self.auto_freq_adjust_enabled = True
 
      # Initialize the PlasmaSerialInterface
         try:
             # Adjust the serial port as needed (e.g., "COM3" on Windows or "/dev/ttyACM0" on Linux)
-            self.plasma_interface = PlasmaSerialInterface('/dev/ttyACM0')
+            self.plasma_interface = PlasmaSerialInterface('/dev/ttyACM0', self.serial_lock)
             if not self.plasma_interface.initialize():
                 self.show_warning_popup("Microcontroller not responding. Check connection.")
         except Exception as e:
@@ -91,6 +94,7 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         self.plasma_interface.ser.reset_input_buffer()
         new_freq = self.plasma_interface.query_freq()
         new_freq = str(round(float(new_freq)/1000, 3))
+        self.manual_frequency_selection.setText(new_freq)
 
     """Queries the current ADC3 supply voltages and updates the GUI accordingly.
         Assumes the following format: 3.3V,15V,HVDC
@@ -100,9 +104,11 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         supply_update = self.plasma_interface.query_supply_voltages()
 
         voltages = supply_update.split()
-        self._3_3V_supply_readout.setText(voltages[0])
-        self._15V_supply_readout.setText(voltages[1])
-        self.high_V_supply_readout(voltages[2])
+        if len(voltages) != 3:
+            return
+        self._3_3V_supply_readout.setText(voltages[0].decode().replace(",", ""))
+        self._15V_supply_readout.setText(voltages[1].decode().replace(",", ""))
+        self.high_V_supply_readout.setText(voltages[2].decode())
 
 
 
@@ -111,11 +117,12 @@ class GUILogic(QMainWindow, Ui_MainWindow):
     """This function provides all of the updating, logging, and ploting that takes place while the plasma
     is active. The function continuously polls the serial buffer for data to log, checks supply voltages,
     and updates the frequency display"""
-    def live_plasma_actions(self, datalog_filepath, stop_event):
-        supply_query_rate = 100000 #defines how often ADC3 readings are queried in number of read cycles
-        freq_query_rate = 100001 #defines how often current freq is queried in number of read cycles
+    def live_plasma_actions(self, datalog_filepath):
+        supply_query_rate = 10000 #defines how often ADC3 readings are queried in number of read cycles
+        freq_query_rate = 1001 #defines how often current freq is queried in number of read cycles
 
-        supplies_counter, freq_counter = 0
+        supplies_counter  = 0
+        freq_counter = 0
         
 
         if (datalog_filepath == "temp"):
@@ -127,25 +134,34 @@ class GUILogic(QMainWindow, Ui_MainWindow):
                 raise IOError
 
 
-        while not stop_event.is_set():
+
+
+        while not self.stop_event.is_set():
+            #this prevents the thread from acessing the serial port if another thread is currently accessing it 
+
+            #update counters
+            supplies_counter += 1
+
+            if self.auto_freq_adjust_enabled:
+                freq_counter += 1
 
             if supplies_counter == supply_query_rate:
                 supplies_counter = 0
                 self.update_supply_readout()
             
-            if freq_counter == freq_query_rate:
+            if freq_counter == freq_query_rate and self.auto_freq_adjust_enabled:
                 freq_counter = 0
                 self.update_freq_readout() 
 
                 
 
+            #with self.serial_lock:
+                #data = self.plasma_interface.ser.readline()
 
-            data = self.plasma_interface.ser.readline()
-
-            #ADC1/2 data recieved
-            if "log" in data:
-                data = data[3:]
-                file.write(data)
+            ##ADC1/2 data recieved
+            #if b"log" in data:
+                #data = data[3:]
+                #file.write(data)
 
             #extract period number
             #is this line the start of a new period?
@@ -153,6 +169,7 @@ class GUILogic(QMainWindow, Ui_MainWindow):
 
             #else, is this line describing adc3 readings? 
             #then update supply voltage readout
+
 
         file.close()
     
@@ -169,7 +186,7 @@ class GUILogic(QMainWindow, Ui_MainWindow):
             self.stop_event.clear()
             self.plasma_thread = threading.Thread(target=self.plasma_interface.start_plasma, args=( \
                 self.enable_auto_voltage_correction.isChecked(), self.enable_auto_frequency_correction.isChecked(), self.stop_event, \
-                self.manual_voltage_selection.text(), self.manual_frequency_selection.text()), daemon=True)
+                self.manual_voltage_selection.text(), self.manual_frequency_selection.text()))
             
             self.plasma_thread.start()
         
@@ -185,7 +202,7 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         if not self.data_logging_allowed:
             self.save_location = "temp"
 
-        self.logging_thread = threading.Thread(target=self.live_plasma_actions, args=(self.save_location, self.stop_event))
+        self.logging_thread = threading.Thread(target=self.live_plasma_actions, args=((self.save_location,)), daemon=True)
         self.logging_thread.start()
 
         self.led_plasma_status.setStyleSheet("background-color: green; border-radius: 40px;")
@@ -197,6 +214,7 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         if self.plasma_thread is not None and self.plasma_thread.is_alive():
             self.stop_event.set()
             self.plasma_thread.join()
+            self.logging_thread.join()
             
         self.led_plasma_status.setStyleSheet("background-color: red; border-radius: 40px;")
         self.label_plasma_status_value.setText("Off")
@@ -277,6 +295,8 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         #clear input box if enabling automatic control
         if state:
             self.manual_frequency_selection.clear()
+        
+        self.auto_freq_adjust_enabled = state
 
     def handle_data_logging_save(self):
         file_path, _ = QFileDialog.getSaveFileName(self, "Save File", "", "All Files (*);;Text Files (*.txt);;Python Files (*.py)")
