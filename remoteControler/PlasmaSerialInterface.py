@@ -5,12 +5,13 @@ import time
 import PlasmaException
 
 class PlasmaSerialInterface:
-    def __init__(self, serialPort, serial_lock):
+    def __init__(self, serialPort, serial_lock, plasma_active_event):
         self.serial_port = serialPort
         self.initialized = False
         self.baud_rate = 8593750
         self.timeout = 0.01
         self.serial_lock = serial_lock
+        self.plasma_active_event = plasma_active_event
 
 
     """The microcontroller does not have a uart buffer. 
@@ -162,6 +163,31 @@ class PlasmaSerialInterface:
 
         self._send("l"+str(send_flag))
 
+
+    """Queries the microcontroller for the csv log header
+    describing the logged parameters
+    """
+    def query_log_header(self):
+        return self._send("lh")
+
+
+    """Queries the microcontroller for the newest available ADC1/2 data
+    """
+    def query_log_data(self):
+        self.ser.reset_input_buffer()
+        with self.serial_lock:
+            for char in "l?":
+                self.ser.write(char.encode())
+                time.sleep(10/1000)
+            #self.ser.write(data.encode() + b"\r")
+            self.ser.write(b"\r")
+            response = b""
+            while True:
+                response += self.ser.read()
+                if b"#" in response:
+                    return response[0:-1]
+
+
     """ Queries the ADC3 to read the current supply voltages
     returns the voltages in the following format: 3.3V, 15V, HVDC
     """
@@ -188,9 +214,15 @@ class PlasmaSerialInterface:
         
         self._send("s!")
 
+        time.sleep(0.1)
+        self.plasma_active_event.set()
+
         #Do nothing until stop signal is triggered
         while not stop_event.is_set():
-            continue
+            time.sleep(0.01)
+
+
+        self.plasma_active_event.clear()
         
         #now shutting down the plasma
         self._send("q")

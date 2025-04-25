@@ -781,8 +781,9 @@ static void printHbridgeDatalogging(uint32_t startTime, uint32_t stopTime)
 
 			sprintf(s_output, "%.2lf,%u,%u,%f,%f,%f,%f,%f", measTime, sHbridge.frequency, sHbridge.deadtime,Is,VplaL1,VplaL2,VbriS1,VbriS2);
 			HAL_UART_Transmit(&huart3, (uint8_t *) s_output, strlen(s_output), 1000);
-			printString("\n");
+			printString("\n\r");
 		}
+	printString("#");
 }
 
 // Automatically Correct the Drive Frequency until user presses any key
@@ -1832,14 +1833,18 @@ void adjust_plasma(char log, int voltage, char auto_freq)
 
 
 /**
+ * Prints the header for the csv log file
+ */
+void print_log_header() {
+	printString("Time(us),Freq (Hz),Deadtime (%),Bridge I,VplaL1,VplaL2,VbriS1,VbriS2");
+	printCR();
+}
+
+
+/**
  * Starts plasma and writes the log header if applicable
  */
 void start_plasma(char log_flag) {
-	if (log_flag == 1) {
-		printString("Time(us),Freq (Hz),Deadtime (%),Bridge I,VplaL1,VplaL2,VbriS1,VbriS2");
-		printCR();
-	}
-
 	if (!supply_status.sHV) {
 		printString("fail");
 		return;
@@ -1884,9 +1889,11 @@ struct rc_state {
 	char logging;
 	char auto_freq;
 	char auto_voltage;
+	char print_log;
 	int log_rate; //periods allowed to pass before updating log
 	int rate_counter; //used to count whether this period should be logged or passed
 	int voltage;
+
 
 };
 typedef struct rc_state rc_state;
@@ -1903,6 +1910,7 @@ static rc_state init_rc_state() {
 	ret_state.log_rate = 0; //no limit on log rate
 	ret_state.rate_counter = 0;
 	ret_state.voltage = -1; //-1 means no voltage correction
+	ret_state.print_log = 0;
 
 	return ret_state;
 }
@@ -2145,6 +2153,10 @@ static void remoteControl()
 					current_state.logging = 1;
 				} else if (input[1] == '0') {
 					current_state.logging = 0;
+				} else if (input[1] == 'h') {
+					print_log_header();
+				} else if (input[1] == '?') {
+					current_state.print_log = 1;
 				}
 				break;
 
@@ -2211,10 +2223,12 @@ static void remoteControl()
 			//This period will be logged (i.e. 'logging_rate' periods have passed since last log update
 
 			if (current_state.rate_counter == current_state.log_rate) {
-				adjust_plasma(current_state.logging, current_state.voltage, current_state.auto_freq);
+				adjust_plasma(current_state.print_log, current_state.voltage, current_state.auto_freq);
 				current_state.rate_counter = 0;
-			} else if (current_state.rate_counter != current_state.log_rate) {
+				current_state.print_log = 0;
+			} else if (current_state.print_log != current_state.log_rate) {
 				adjust_plasma(0, current_state.voltage, current_state.auto_freq);
+				current_state.print_log = 0;
 			}
 
 

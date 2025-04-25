@@ -24,12 +24,13 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         self.logging_thread = None
         self.stop_event = threading.Event()
         self.serial_lock = threading.Lock()
+        self.plasma_active_event = threading.Event()
         self.auto_freq_adjust_enabled = True
 
      # Initialize the PlasmaSerialInterface
         try:
             # Adjust the serial port as needed (e.g., "COM3" on Windows or "/dev/ttyACM0" on Linux)
-            self.plasma_interface = PlasmaSerialInterface('/dev/ttyACM0', self.serial_lock)
+            self.plasma_interface = PlasmaSerialInterface('/dev/ttyACM0', self.serial_lock, self.plasma_active_event)
             if not self.plasma_interface.initialize():
                 self.show_warning_popup("Microcontroller not responding. Check connection.")
         except Exception as e:
@@ -120,10 +121,14 @@ class GUILogic(QMainWindow, Ui_MainWindow):
     def live_plasma_actions(self, datalog_filepath):
         supply_query_rate = 10000 #defines how often ADC3 readings are queried in number of read cycles
         freq_query_rate = 1001 #defines how often current freq is queried in number of read cycles
+        logging_rate = 9999
 
         supplies_counter  = 0
         freq_counter = 0
+        log_counter = 0
         
+
+        time.sleep(0.1)
 
         if (datalog_filepath == "temp"):
             file = tempfile.TemporaryFile(mode="w+b")
@@ -133,7 +138,12 @@ class GUILogic(QMainWindow, Ui_MainWindow):
             except:
                 raise IOError
 
+        #wait until plasma has been started 
+        while not self.plasma_active_event.is_set():
+            continue
 
+        #get header for csv file
+        file.write(self.plasma_interface.query_log_header())
 
 
         while not self.stop_event.is_set():
@@ -141,6 +151,7 @@ class GUILogic(QMainWindow, Ui_MainWindow):
 
             #update counters
             supplies_counter += 1
+            log_counter += 1
 
             if self.auto_freq_adjust_enabled:
                 freq_counter += 1
@@ -153,7 +164,15 @@ class GUILogic(QMainWindow, Ui_MainWindow):
                 freq_counter = 0
                 self.update_freq_readout() 
 
-                
+            if log_counter == logging_rate:
+                log_counter = 0
+                new_data = self.plasma_interface.query_log_data()
+                file.write(new_data)
+
+
+
+
+                     
 
             #with self.serial_lock:
                 #data = self.plasma_interface.ser.readline()
@@ -184,9 +203,10 @@ class GUILogic(QMainWindow, Ui_MainWindow):
 
             #start the plasma thread in the background
             self.stop_event.clear()
+            self.plasma_active_event.clear()
             self.plasma_thread = threading.Thread(target=self.plasma_interface.start_plasma, args=( \
                 self.enable_auto_voltage_correction.isChecked(), self.enable_auto_frequency_correction.isChecked(), self.stop_event, \
-                self.manual_voltage_selection.text(), self.manual_frequency_selection.text()))
+                self.manual_voltage_selection.text(), self.manual_frequency_selection.text()), daemon=True)
             
             self.plasma_thread.start()
         
@@ -213,8 +233,9 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         ## TODO Change system indicators to update on ADC measurment not button press
         if self.plasma_thread is not None and self.plasma_thread.is_alive():
             self.stop_event.set()
-            self.plasma_thread.join()
-            self.logging_thread.join()
+            self.plasma_active_event.clear()
+            self.plasma_thread.join(timeout=3)
+            self.logging_thread.join(timeout=3)
             
         self.led_plasma_status.setStyleSheet("background-color: red; border-radius: 40px;")
         self.label_plasma_status_value.setText("Off")
