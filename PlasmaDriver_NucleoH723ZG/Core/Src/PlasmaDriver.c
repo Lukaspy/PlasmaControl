@@ -1719,6 +1719,43 @@ static void TestModeAction(char input)
 	}
 }
 
+/**
+ * Prints all of the ADC3 read supply voltages in a CSV format:
+ * 3.3V,15V,HV
+ */
+void print_supply_voltages_rc() {
+
+	measureVoltagesTemperaturesADC3();
+	//Wait until ADC3 reading is done
+	while (sADC.adc3_reading) ;
+
+	char text[100];
+	float V3_3;
+	float V15;
+	float VHVDC;
+
+	for (int i=0; i<ADC3_DMA_REQUESTS; i++)
+	{
+
+		switch (i)
+		{
+			case ADC3_15V:
+				V15 =  1000*((30.0+120.0)/30.0)*3.3*(((float) sADC.adc3_data[ADC3_15V])/4096.0);
+				break;
+
+			case ADC3_3_3V:
+				V3_3 =  1000*((30.0+3.0)/30.0)*3.3*(((float) sADC.adc3_data[ADC3_3_3V])/4096.0);
+				break;
+
+			case ADC3_500VDC:
+				VHVDC =  1000*((12.0+2000.0)/12.0)*3.3*(((float) sADC.adc3_data[ADC3_500VDC])/4096.0);
+				break;
+		}
+
+		sprintf(text, "%7u,%7u,%7u\n\r", (int) V3_3, (int) V15, (int) VHVDC);
+		printString(text);
+	}
+}
 
 
 /**
@@ -1903,6 +1940,8 @@ static void querySupply(char *input) {
 			printString("off");
 		}
 
+	} else if (strstr(input, "a") != NULL) { //Queries the supply voltages from ADC3
+		print_supply_voltages_rc();
 	}
 }
 

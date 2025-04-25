@@ -1,5 +1,6 @@
 ## Author Nolan Olaso
 
+import tempfile
 import threading
 from PySide6.QtWidgets import QMainWindow, QMessageBox, QFileDialog
 from plasma_control_GUI import Ui_MainWindow
@@ -85,22 +86,75 @@ class GUILogic(QMainWindow, Ui_MainWindow):
 
         self.system_on = False
         print("Power Off button was pushed")
+
+    def update_freq_readout(self):
+        self.plasma_interface.ser.reset_input_buffer()
+        new_freq = self.plasma_interface.query_freq()
+        new_freq = str(round(float(new_freq)/1000, 3))
+
+    """Queries the current ADC3 supply voltages and updates the GUI accordingly.
+        Assumes the following format: 3.3V,15V,HVDC
+    """
+    def update_supply_readout(self):
+        self.plasma_interface.ser.reset_input_buffer()
+        supply_update = self.plasma_interface.query_supply_voltages()
+
+        voltages = supply_update.split()
+        self._3_3V_supply_readout.setText(voltages[0])
+        self._15V_supply_readout.setText(voltages[1])
+        self.high_V_supply_readout(voltages[2])
+
+
+
     
 
-    def live_plot(self, plotting_flag):
-        #TODO: update a matplotlib plot from csv
-        return
-        with open(self.data_logging_save_location, 'r') as file:
-            while not self.stop_event.is_set():
-                new_line = file.readline()
-                if not new_line: continue #there is new data to update
+    """This function provides all of the updating, logging, and ploting that takes place while the plasma
+    is active. The function continuously polls the serial buffer for data to log, checks supply voltages,
+    and updates the frequency display"""
+    def live_plasma_actions(self, datalog_filepath, stop_event):
+        supply_query_rate = 100000 #defines how often ADC3 readings are queried in number of read cycles
+        freq_query_rate = 100001 #defines how often current freq is queried in number of read cycles
 
-                #extract period number
-                #is this line the start of a new period?
-                #if yes, read in all of the matching data points, plot, then continue
+        supplies_counter, freq_counter = 0
+        
 
-                #else, is this line describing adc3 readings? 
-                #then update supply voltage readout
+        if (datalog_filepath == "temp"):
+            file = tempfile.TemporaryFile(mode="w+b")
+        else:
+            try:
+                file = open(datalog_filepath, 'wb')
+            except:
+                raise IOError
+
+
+        while not stop_event.is_set():
+
+            if supplies_counter == supply_query_rate:
+                supplies_counter = 0
+                self.update_supply_readout()
+            
+            if freq_counter == freq_query_rate:
+                freq_counter = 0
+                self.update_freq_readout() 
+
+                
+
+
+            data = self.plasma_interface.ser.readline()
+
+            #ADC1/2 data recieved
+            if "log" in data:
+                data = data[3:]
+                file.write(data)
+
+            #extract period number
+            #is this line the start of a new period?
+            #if yes, read in all of the matching data points, plot, then continue
+
+            #else, is this line describing adc3 readings? 
+            #then update supply voltage readout
+
+        file.close()
     
 
     def handle_strike_plasma(self):
@@ -113,9 +167,9 @@ class GUILogic(QMainWindow, Ui_MainWindow):
 
             #start the plasma thread in the background
             self.stop_event.clear()
-            self.plasma_thread = threading.Thread(target=self.plasma_interface.start_plasma, args=(self.data_logging_allowed, \
+            self.plasma_thread = threading.Thread(target=self.plasma_interface.start_plasma, args=( \
                 self.enable_auto_voltage_correction.isChecked(), self.enable_auto_frequency_correction.isChecked(), self.stop_event, \
-                self.manual_voltage_selection.text(), self.manual_frequency_selection.text(), self.save_location), daemon=True)
+                self.manual_voltage_selection.text(), self.manual_frequency_selection.text()), daemon=True)
             
             self.plasma_thread.start()
         
@@ -127,8 +181,12 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         ## TODO Change system indicators to update on ADC measurment not button press
 
         #start data plotting/supply voltage updates
-        #self.logging_thread = threading.Thread(target=self.live_plot, args=(self.enable_data_logging.isChecked))
-        #self.logging_thread.start()
+        #if the user does not want to log data, tell live_plasma_actions to create a temp file for live plotting
+        if not self.data_logging_allowed:
+            self.save_location = "temp"
+
+        self.logging_thread = threading.Thread(target=self.live_plasma_actions, args=(self.save_location, self.stop_event))
+        self.logging_thread.start()
 
         self.led_plasma_status.setStyleSheet("background-color: green; border-radius: 40px;")
         self.label_plasma_status_value.setText("On")

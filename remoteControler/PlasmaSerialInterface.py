@@ -159,6 +159,15 @@ class PlasmaSerialInterface:
 
         self._send("l"+str(send_flag))
 
+    """ Queries the ADC3 to read the current supply voltages
+    returns the voltages in the following format: 3.3V, 15V, HVDC
+    """
+    def query_supply_voltages(self):
+        self.ser.reset_input_buffer()
+        self._send("p?a")
+        return self.ser.readline().strip()
+        
+
     """Send the system shutdown command. Stops plasma (if running) shutsdown all supplies"""
     def system_shutdown(self):
         self._send("z")
@@ -166,7 +175,7 @@ class PlasmaSerialInterface:
 
 
 
-    def start_plasma(self, datalog_flag, auto_voltage_flag, auto_freq_flag, stop_event, voltage=-1, manual_freq=30000,  datalog_filepath=""):
+    def start_plasma(self, auto_voltage_flag, auto_freq_flag, stop_event, voltage=-1, manual_freq=30000):
         """Activates the plasma depending on the boolean flag parameters"""
 
         if not self.query_15_supply() or not self.query_3_3_supply():
@@ -176,25 +185,13 @@ class PlasmaSerialInterface:
             self.system_shutdown()
             raise PlasmaException.PlasmaException("High voltage in unknown state!")
         
-        if not datalog_flag:
-            self._send("s!")
-            while not stop_event.is_set():
-                continue
-            
-        else:
-            try:
-                file = open(datalog_filepath, 'wb')
-            except:
-                raise IOError
+        self.ser.reset_input_buffer()
 
-            self.ser.reset_input_buffer()
-            self._send("s!")
+        self._send("s!")
 
-            with open(datalog_filepath, 'wb') as file:
-                while not stop_event.is_set():
-                    data = self.ser.readline()
-                    file.write(data)
-                    file.flush()
+        #Do nothing until stop signal is triggered
+        while not stop_event.is_set():
+            continue
         
         #now shutting down the plasma
         self._send("q")
