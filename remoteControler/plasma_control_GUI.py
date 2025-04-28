@@ -129,6 +129,7 @@ class Ui_MainWindow(object):
         self.canvas.setGeometry(QRect(10, 30, 361, 211))
 
         # Test: plot a sine wave
+        """
         x = np.linspace(0, 2 * np.pi, 200)
         y = np.sin(x)
         self.canvas.axes.plot(x, y)
@@ -136,6 +137,7 @@ class Ui_MainWindow(object):
         self.canvas.axes.set_xlabel("x")
         self.canvas.axes.set_ylabel("sin(x)")
         self.canvas.draw()
+        """
 
         # Frame containing settings
         self.frame_q3 = QFrame(self.centralwidget)

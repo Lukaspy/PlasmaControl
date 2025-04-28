@@ -112,6 +112,27 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         self.high_V_supply_readout.setText(str((float(voltages[2].decode()))/1000))
 
 
+    """Updates the plot displaying the system parameters"""
+    def update_plot(self, data):
+        #parse the csv formatted data into usable lists
+        rows = data.strip().split("\n\r") 
+        rows = [row.split(",") for row in rows]
+        rows = [[float(cell) for cell in row] for row in rows]
+
+
+        columns = list(zip(*rows))
+        
+        #Subtract the initial time value from all subsequent values to get relative timing
+        columns[0] = [x - columns[0][0] for x in columns[0]]
+        
+
+        self.canvas.axes.clear()
+        x = columns[0]
+        y = columns[3]
+        self.canvas.axes.plot(x,y)
+        self.canvas.draw()
+
+        return
 
     
 
@@ -166,6 +187,9 @@ class GUILogic(QMainWindow, Ui_MainWindow):
                 try:
                     new_data = self.plasma_interface.query_log_data()
                     file.write(new_data)
+
+                    self.update_plot(new_data.decode())
+
                 except:
                     continue
 

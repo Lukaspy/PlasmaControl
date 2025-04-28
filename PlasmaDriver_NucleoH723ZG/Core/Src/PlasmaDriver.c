@@ -772,7 +772,7 @@ static void printHbridgeDatalogging(uint32_t startTime, uint32_t stopTime)
 		{
 			//calculate time of current measurement (start time + ADC sample rate)
 			//TODO: This is likely not exactly accurate. Better way to record time of measurement accounting for conversion/DMA time?
-			double measTime = startTime + (interval * i);
+			double measTime = ((double) startTime + (interval * (double) i)) * (double) 0.5;
 
 			float Is = convertADC12data(i+ADC2_Is, NULL);
 			float VplaL1 = convertADC12data(i+ADC1_VplaL1, NULL);
