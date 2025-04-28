@@ -138,9 +138,6 @@ class GUILogic(QMainWindow, Ui_MainWindow):
             except:
                 raise IOError
 
-        #wait until plasma has been started 
-        while not self.plasma_active_event.is_set():
-            continue
 
         #get header for csv file
         file.write(self.plasma_interface.query_log_header())
@@ -166,8 +163,13 @@ class GUILogic(QMainWindow, Ui_MainWindow):
 
             if log_counter == logging_rate:
                 log_counter = 0
-                new_data = self.plasma_interface.query_log_data()
-                file.write(new_data)
+                try:
+                    new_data = self.plasma_interface.query_log_data()
+                    file.write(new_data)
+                except:
+                    continue
+
+
 
 
 

@@ -182,10 +182,18 @@ class PlasmaSerialInterface:
             #self.ser.write(data.encode() + b"\r")
             self.ser.write(b"\r")
             response = b""
+            start_time = time.time()
+            timeout = 0.5  # seconds
+
             while True:
-                response += self.ser.read()
-                if b"#" in response:
-                    return response[0:-1]
+                if self.ser.in_waiting > 0:
+                    response += self.ser.read(self.ser.in_waiting)
+                    if b"#" in response:
+                        idx = response.index(b"#")
+                        return bytes(response[:idx])  # exclude terminator
+                if time.time() - start_time > timeout:
+                    raise TimeoutError("No complete response received")
+                time.sleep(0.01)  # Yield CPU
 
 
     """ Queries the ADC3 to read the current supply voltages
@@ -201,12 +209,21 @@ class PlasmaSerialInterface:
         self._send("z")
 
 
+    """Query whether plasma is active or not. Returns True if active, False otherwise"""
+    def query_plasma(self):
+        return self._send("s?") == "on"
+
+
+
 
 
     def start_plasma(self):
         """Activates the plasma depending on the boolean flag parameters"""
         if not self.query_15_supply() or not self.query_3_3_supply():
             raise PlasmaException.PlasmaException('Low Voltage Supplies not on!')
+
+        if self.query_plasma():
+            raise PlasmaException.PlasmaException('System is already running')
         
         if not self.toggle_high_voltage():
             self.system_shutdown()
