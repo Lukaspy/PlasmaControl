@@ -140,13 +140,9 @@ class GUILogic(QMainWindow, Ui_MainWindow):
     is active. The function continuously polls the serial buffer for data to log, checks supply voltages,
     and updates the frequency display"""
     def live_plasma_actions(self, datalog_filepath):
-        supply_query_rate = 10000 #defines how often ADC3 readings are queried in number of read cycles
-        freq_query_rate = 1001 #defines how often current freq is queried in number of read cycles
-        logging_rate = 9999
-
-        supplies_counter  = 0
-        freq_counter = 0
-        log_counter = 0
+        supply_query_rate = 0.5 #defines how often ADC3 readings are queried in number of read cycles
+        freq_query_rate = .1 #defines how often current freq is queried in number of read cycles
+        logging_rate = 1/1000
         
 
         time.sleep(0.1)
@@ -163,27 +159,23 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         #get header for csv file
         file.write(self.plasma_interface.query_log_header())
 
+        next_supplies_time = time.time() + supply_query_rate
+        next_freq_time = time.time() + freq_query_rate
+        next_log_time = time.time() + logging_rate
 
         while not self.stop_event.is_set():
-            #this prevents the thread from acessing the serial port if another thread is currently accessing it 
+            current_time = time.time()
 
-            #update counters
-            supplies_counter += 1
-            log_counter += 1
-
-            if self.auto_freq_adjust_enabled:
-                freq_counter += 1
-
-            if supplies_counter == supply_query_rate:
-                supplies_counter = 0
+            if current_time >= next_supplies_time:
+                next_supplies_time = current_time + supply_query_rate
                 self.update_supply_readout()
             
-            if freq_counter == freq_query_rate and self.auto_freq_adjust_enabled:
-                freq_counter = 0
+            if current_time >= next_freq_time and self.auto_freq_adjust_enabled:
+                next_freq_time = current_time + freq_query_rate
                 self.update_freq_readout() 
 
-            if log_counter == logging_rate:
-                log_counter = 0
+            if current_time >= next_log_time:
+                next_log_time = current_time + logging_rate
                 try:
                     new_data = self.plasma_interface.query_log_data()
                     file.write(new_data)
@@ -256,7 +248,10 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         if self.logging_thread is not None and self.logging_thread.is_alive():
             self.stop_event.set()
             self.plasma_active_event.clear()
-            self.logging_thread.join(timeout=3)
+            print("here")
+            time.sleep(0.5)
+            self.logging_thread.join()#timeout=3)
+            print("hereher")
             
         self.led_plasma_status.setStyleSheet("background-color: red; border-radius: 40px;")
         self.label_plasma_status_value.setText("Off")
