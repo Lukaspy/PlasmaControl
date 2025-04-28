@@ -675,8 +675,8 @@ void measureBridgePlasmaADC12(void)
 {
 	//HAL_GPIO_WritePin(TEST_OUTPUT_GPIO_Port, TEST_OUTPUT_Pin, GPIO_PIN_SET);
 
-	//Calculate number of reads needed for one period
-	sADC.nADC12Read = ((uint32_t) ((1/(float) sHbridge.frequency)/ADC12_GROUP_READTIME));//* 2; //Multiplied by two to grab two periods
+	//Calculate number of reads needed for one period. Group readtime is multiplied by 3 since the ADC does not seem to be sampling at the expected 1us
+	sADC.nADC12Read = ((uint32_t) ((1/(float) sHbridge.frequency)/(ADC12_GROUP_READTIME*3)));//* 2; //Multiplied by two to grab two periods
 	sADC.nADC12Read +=2; //Add to see the start of next period
 
 	//Start ADC1 and ADC2 measurements
@@ -1826,7 +1826,7 @@ void adjust_plasma(char log, int voltage, char auto_freq)
 
 	//Print current ADC data
 	if (log == 1) {
-		printHbridgeDatalogging(startTime, stopTime);
+		printHbridgeDatalogging(startTime, stopTime-3);//stop time - 3 which is equivalent to subtracting 1.5us to account for overhead
 	}
 
 
