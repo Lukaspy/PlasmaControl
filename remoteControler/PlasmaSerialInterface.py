@@ -8,7 +8,7 @@ class PlasmaSerialInterface:
     def __init__(self, serialPort, serial_lock, plasma_active_event):
         self.serial_port = serialPort
         self.initialized = False
-        self.baud_rate = 8593750
+        self.baud_rate = 6875000
         self.timeout = 0.01
         self.serial_lock = serial_lock
         self.plasma_active_event = plasma_active_event
