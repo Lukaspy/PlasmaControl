@@ -200,15 +200,7 @@ class GUILogic(QMainWindow, Ui_MainWindow):
 
 
         try:
-
-            #start the plasma thread in the background
-            self.stop_event.clear()
-            self.plasma_active_event.clear()
-            self.plasma_thread = threading.Thread(target=self.plasma_interface.start_plasma, args=( \
-                self.enable_auto_voltage_correction.isChecked(), self.enable_auto_frequency_correction.isChecked(), self.stop_event, \
-                self.manual_voltage_selection.text(), self.manual_frequency_selection.text()), daemon=True)
-            
-            self.plasma_thread.start()
+            self.plasma_interface.start_plasma()
         
         except Exception as e:
             self.handle_plasma_off()
@@ -221,6 +213,9 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         #if the user does not want to log data, tell live_plasma_actions to create a temp file for live plotting
         if not self.data_logging_allowed:
             self.save_location = "temp"
+
+        self.stop_event.clear()
+        self.plasma_active_event.clear()
 
         self.logging_thread = threading.Thread(target=self.live_plasma_actions, args=((self.save_location,)), daemon=True)
         self.logging_thread.start()

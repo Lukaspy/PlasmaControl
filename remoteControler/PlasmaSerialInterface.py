@@ -203,7 +203,7 @@ class PlasmaSerialInterface:
 
 
 
-    def start_plasma(self, auto_voltage_flag, auto_freq_flag, stop_event, voltage=-1, manual_freq=30000):
+    def start_plasma(self):
         """Activates the plasma depending on the boolean flag parameters"""
         if not self.query_15_supply() or not self.query_3_3_supply():
             raise PlasmaException.PlasmaException('Low Voltage Supplies not on!')
@@ -213,19 +213,6 @@ class PlasmaSerialInterface:
             raise PlasmaException.PlasmaException("High voltage in unknown state!")
         
         self._send("s!")
-
-        time.sleep(0.1)
-        self.plasma_active_event.set()
-
-        #Do nothing until stop signal is triggered
-        while not stop_event.is_set():
-            time.sleep(0.01)
-
-
-        self.plasma_active_event.clear()
-        
-        #now shutting down the plasma
-        self._send("q")
 
 
         
