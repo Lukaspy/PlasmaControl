@@ -214,6 +214,9 @@ class PlasmaSerialInterface:
         
         self._send("s!")
 
+    def stop_plasma(self):
+        self._send("q")
+
 
         
         

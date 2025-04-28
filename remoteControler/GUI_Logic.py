@@ -226,10 +226,10 @@ class GUILogic(QMainWindow, Ui_MainWindow):
     
     def handle_plasma_off(self):
         ## TODO Change system indicators to update on ADC measurment not button press
-        if self.plasma_thread is not None and self.plasma_thread.is_alive():
+        self.plasma_interface.stop_plasma()
+        if self.logging_thread is not None and self.logging_thread.is_alive():
             self.stop_event.set()
             self.plasma_active_event.clear()
-            self.plasma_thread.join(timeout=3)
             self.logging_thread.join(timeout=3)
             
         self.led_plasma_status.setStyleSheet("background-color: red; border-radius: 40px;")
