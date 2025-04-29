@@ -779,8 +779,9 @@ static void printHbridgeDatalogging(uint32_t startTime, uint32_t stopTime)
 			float VplaL2 = convertADC12data(i+ADC2_VplaL2, NULL);
 			float VbriS1 = convertADC12data(i+ADC1_VbriS1, NULL);
 			float VbriS2 = convertADC12data(i+ADC2_VbriS2, NULL);
+			int timer1_value = convertADC12data(i+ADC1_TIM1_CH1, NULL);
 
-			sprintf(s_output, "%.2lf,%u,%u,%f,%f,%f,%f,%f", measTime, sHbridge.frequency, sHbridge.deadtime,Is,VplaL1,VplaL2,VbriS1,VbriS2);
+			sprintf(s_output, "%.2lf,%u,%u,%f,%f,%f,%f,%f, %u", measTime, sHbridge.frequency, sHbridge.deadtime,Is,VplaL1,VplaL2,VbriS1,VbriS2,timer1_value);
 			HAL_UART_Transmit(&huart3, (uint8_t *) s_output, strlen(s_output), 1000);
 			printString("\n\r");
 		}
@@ -1837,7 +1838,7 @@ void adjust_plasma(char log, int voltage, char auto_freq)
  * Prints the header for the csv log file
  */
 void print_log_header() {
-	printString("Time(us),Freq (Hz),Deadtime (%),Bridge I,VplaL1,VplaL2,VbriS1,VbriS2");
+	printString("Time(us),Freq (Hz),Deadtime (%),Bridge I,VplaL1,VplaL2,VbriS1,VbriS2,TIM1 status");
 	printCR();
 }
 
