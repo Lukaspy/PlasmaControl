@@ -9,7 +9,7 @@ class PlasmaSerialInterface:
         self.serial_port = serialPort
         self.initialized = False
         self.baud_rate = 6875000
-        self.timeout = 0.01
+        self.timeout = 0.1
         self.serial_lock = serial_lock
         self.plasma_active_event = plasma_active_event
 

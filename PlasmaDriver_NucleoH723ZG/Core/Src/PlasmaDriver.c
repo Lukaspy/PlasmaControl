@@ -57,7 +57,7 @@ static char *config_menu[CONFIG_MENU_SIZE];
 
 // The data above defines a group. One group of data will consist of 6 data elements of size 16 bit; one from each channel.
 // The number of groups is defined by
-#define ADC12_MAX_GROUP 100				// Maximum number of groups
+#define ADC12_MAX_GROUP 200//100				// Maximum number of groups
 #define ADC12_GROUP_READTIME 1.0000E-6	// Read time for a group in seconds
 
 // The ADC's are setup in continues mode and will repeat reading until all DMA requests have been handled.
@@ -676,8 +676,12 @@ void measureBridgePlasmaADC12(void)
 	//HAL_GPIO_WritePin(TEST_OUTPUT_GPIO_Port, TEST_OUTPUT_Pin, GPIO_PIN_SET);
 
 	//Calculate number of reads needed for one period. Group readtime is multiplied by 3 since the ADC does not seem to be sampling at the expected 1us
-	sADC.nADC12Read = ((uint32_t) ((1/(float) sHbridge.frequency)/(ADC12_GROUP_READTIME*3)));//* 2; //Multiplied by two to grab two periods
+	sADC.nADC12Read = ((uint32_t) ((1/(float) sHbridge.frequency)/(ADC12_GROUP_READTIME))) * 2; //Multiplied by two to grab two periods
 	sADC.nADC12Read +=2; //Add to see the start of next period
+
+	if (sADC.nADC12Read > ADC12_MAX_GROUP) {
+		sADC.nADC12Read = ADC12_MAX_GROUP;
+	}
 
 	//Start ADC1 and ADC2 measurements
 	if (sADC.nADC12Read <= ADC12_MAX_GROUP)
