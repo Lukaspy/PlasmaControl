@@ -3,6 +3,7 @@
 import tempfile
 import threading
 import time
+import operator
 from PySide6.QtWidgets import QMainWindow, QMessageBox, QFileDialog
 from plasma_control_GUI import Ui_MainWindow
 from PlasmaSerialInterface import PlasmaSerialInterface
@@ -125,11 +126,33 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         #Subtract the initial time value from all subsequent values to get relative timing
         columns[0] = [x - columns[0][0] for x in columns[0]]
         
+        #                  0          1              2             3         4          5         6        7            8             
+        #Columns layout: [Time], [Freq (Hz)], [Deadtime (%)], [Bridge I], [VplaL1], [VplaL2], [VbriS1], [VbriS2], [TIM1 status]
 
-        self.canvas.axes.clear()
-        x = columns[0]
-        y = columns[3]
-        self.canvas.axes.plot(x,y)
+
+        
+        time = columns[0]
+        bridgeI = columns[3]
+        #Subtract L1 and L2 to get differential voltage across array
+        plasmaV = list(map(operator.sub, columns[4], columns[5]))
+
+
+
+        self.canvas.ax1.clear()
+        self.canvas.ax2.clear()
+        #plot bridge current
+        color = "tab:red"
+        self.canvas.ax1.set_xlabel('Time (us)')
+        self.canvas.ax1.set_ylabel('Bridge Current (mA)', color = color) 
+        self.canvas.ax1.plot(time,bridgeI, color = color)
+        
+        #plot plasma voltage
+        color = 'tab:blue'
+        self.canvas.ax2.set_ylabel('Plasma Voltage', color = color) 
+        self.canvas.ax2.plot(time, plasmaV, color = color) 
+        self.canvas.ax2.yaxis.set_label_position("right")
+        #self.canvas.ax2.tick_params(axis ='y', labelcolor = color) 
+
         self.canvas.draw()
 
         return
@@ -244,7 +267,6 @@ class GUILogic(QMainWindow, Ui_MainWindow):
     
     def handle_plasma_off(self):
         ## TODO Change system indicators to update on ADC measurment not button press
-        self.plasma_interface.stop_plasma()
         if self.logging_thread is not None and self.logging_thread.is_alive():
             self.stop_event.set()
             self.plasma_active_event.clear()
@@ -253,6 +275,7 @@ class GUILogic(QMainWindow, Ui_MainWindow):
             self.logging_thread.join()#timeout=3)
             print("hereher")
             
+        self.plasma_interface.stop_plasma()
         self.led_plasma_status.setStyleSheet("background-color: red; border-radius: 40px;")
         self.label_plasma_status_value.setText("Off")
 

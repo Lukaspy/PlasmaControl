@@ -19,7 +19,8 @@ import numpy as np
 class MplCanvas(FigureCanvas):
     def __init__(self, parent=None, width=4, height=3, dpi=100):
         fig = Figure(figsize=(width, height), dpi=dpi)
-        self.axes = fig.add_subplot(111)
+        self.ax1 = fig.add_subplot(111)
+        self.ax2 = self.ax1.twinx()
         super().__init__(fig)
         self.setParent(parent)
 
@@ -125,7 +126,7 @@ class Ui_MainWindow(object):
         self.label_live_data_plotting.setGeometry(QRect(140, 0, 101, 20)) # Position
 
         #Live date plotting
-        self.canvas = MplCanvas(self.frame_q2, width=4, height=3, dpi=100)
+        self.canvas = MplCanvas(self.frame_q2, width=4, height=3, dpi=50)
         self.canvas.setGeometry(QRect(10, 30, 361, 211))
 
         # Test: plot a sine wave
