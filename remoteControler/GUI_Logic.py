@@ -126,8 +126,8 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         #Subtract the initial time value from all subsequent values to get relative timing
         columns[0] = [x - columns[0][0] for x in columns[0]]
         
-        #                  0          1              2             3         4          5         6        7            8             
-        #Columns layout: [Time], [Freq (Hz)], [Deadtime (%)], [Bridge I], [VplaL1], [VplaL2], [VbriS1], [VbriS2], [TIM1 status]
+        #                  0          1              2             3         4          5         6        7            8           9        10
+        #Columns layout: [Time], [Freq (Hz)], [Deadtime (%)], [Bridge I], [VplaL1], [VplaL2], [VbriS1], [VbriS2], [TIM1 status], [upper], [lower]
 
 
         
@@ -135,6 +135,9 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         bridgeI = columns[3]
         #Subtract L1 and L2 to get differential voltage across array
         plasmaV = list(map(operator.sub, columns[4], columns[5]))
+        
+        upper = columns[9]
+        lower = columns[10]
 
 
 
@@ -145,6 +148,10 @@ class GUILogic(QMainWindow, Ui_MainWindow):
         self.canvas.ax1.set_xlabel('Time (us)')
         self.canvas.ax1.set_ylabel('Bridge Current (mA)', color = color) 
         self.canvas.ax1.plot(time,bridgeI, color = color)
+        
+        if (self.auto_freq_adjust_enabled):
+            uppercursorline = self.canvas.ax1.axhline(y=upper[1], color='green', linestyle='--')
+            lowercursorline = self.canvas.ax1.axhline(y=lower[1], color='green', linestyle='--')
         
         #plot plasma voltage
         color = 'tab:blue'

@@ -57,7 +57,7 @@ static char *config_menu[CONFIG_MENU_SIZE];
 
 // The data above defines a group. One group of data will consist of 6 data elements of size 16 bit; one from each channel.
 // The number of groups is defined by
-#define ADC12_MAX_GROUP 200//100				// Maximum number of groups
+#define ADC12_MAX_GROUP 200//100				// Maximum number of groups Originally set to 100, increased to 200.
 #define ADC12_GROUP_READTIME 1.0000E-6	// Read time for a group in seconds
 
 // The ADC's are setup in continues mode and will repeat reading until all DMA requests have been handled.
@@ -583,7 +583,7 @@ void printADC12data(void)
 
 //Calculate frequency correction
 //Returns 1 if a valid frequency correction is calculated, otherwise 0
-uint8_t freqCorrection(int16_t *freqCorr)
+uint8_t freqCorrection(int16_t *freqCorr, float *upperval, float *lowerval)
 {
 	int start_index=0;
 	int stop_index=0;
@@ -637,6 +637,13 @@ uint8_t freqCorrection(int16_t *freqCorr)
 	{
 		float upper = convertADC12data(start_index+ADC2_Is+6, NULL);
 		float lower = convertADC12data(stop_index+ADC2_Is-6, NULL);
+
+		if (!(upperval == NULL || lowerval == NULL))
+		{
+			*upperval = upper;
+			*lowerval = lower;
+		}
+
 		*freqCorr = (int16_t) 1000*(upper - lower)/norm;
 		return(1);
 	}
@@ -736,7 +743,7 @@ void doneMeasuringBridgePlasmaADC12(uint32_t errorCode)
 			{
 				//Adjust H-bridge frequency
 				int16_t freqCorr = 0;
-				if (freqCorrection(&freqCorr))
+				if (freqCorrection(&freqCorr, NULL, NULL))
 					sHbridge.frequency += freqCorr;
 				//TODO Adjust H-bridge dead time
 				//sHbridge.deadtime = new setting;
@@ -765,7 +772,7 @@ void doneMeasuringBridgePlasmaADC12(uint32_t errorCode)
 // Prints: Hbridge Freq, Deadtime, Is, VplaL1, VplaL2, VbrS1, VbriS2
 // Parameter:
 //		startTime: denotes the system time when ADC measurement was started
-static void printHbridgeDatalogging(uint32_t startTime, uint32_t stopTime)
+static void printHbridgeDatalogging(uint32_t startTime, uint32_t stopTime, float upper, float lower)
 {
 	char s_output[1000];
 	//Convert from ms to sec: time elapsed / number of adc reads
@@ -785,7 +792,7 @@ static void printHbridgeDatalogging(uint32_t startTime, uint32_t stopTime)
 			float VbriS2 = convertADC12data(i+ADC2_VbriS2, NULL);
 			int timer1_value = convertADC12data(i+ADC1_TIM1_CH1, NULL);
 
-			sprintf(s_output, "%.2lf,%u,%u,%f,%f,%f,%f,%f, %u", measTime, sHbridge.frequency, sHbridge.deadtime,Is,VplaL1,VplaL2,VbriS1,VbriS2,timer1_value);
+			sprintf(s_output, "%.2lf,%u,%u,%f,%f,%f,%f,%f, %u, %f, %f", measTime, sHbridge.frequency, sHbridge.deadtime,Is,VplaL1,VplaL2,VbriS1,VbriS2,timer1_value,upper,lower);
 			HAL_UART_Transmit(&huart3, (uint8_t *) s_output, strlen(s_output), 1000);
 			printString("\n\r");
 		}
@@ -818,7 +825,7 @@ void autoFreqAdj(void)
 
 		//Calculate delta f
 		int16_t freqCorr;
-		freqCorrection(&freqCorr);
+		freqCorrection(&freqCorr, NULL, NULL);
 
 		//char text[100];
 		//sprintf(text, "\n\rFrequency correction: %i", (int) freqCorr);
@@ -847,7 +854,7 @@ void autoFreqAdj(void)
 		programHbridge();
 
 		//Print current ADC data
-		printHbridgeDatalogging(startTime, stopTime);
+		printHbridgeDatalogging(startTime, stopTime, 0, 0);
 
 
 	}
@@ -908,7 +915,7 @@ void autoVoltageAdj(int16_t userVoltage)
 		programHbridge();
 
 		//Print current ADC data
-		printHbridgeDatalogging(startTime, stopTime);
+		printHbridgeDatalogging(startTime, stopTime, 0, 0);
 
 
 	}
@@ -1689,7 +1696,7 @@ static void TestModeAction(char input)
 
 		case 'q': //Frequency correction
 			int16_t freqCorr;
-			if (freqCorrection(&freqCorr))
+			if (freqCorrection(&freqCorr, NULL, NULL))
 			{
 				char text[100];
 				sprintf(text, "\n\rFrequency correction: %i", (int) freqCorr);
@@ -1772,6 +1779,8 @@ void print_supply_voltages_rc() {
 void adjust_plasma(char log, int voltage, char auto_freq)
 {
 
+	float upper = 0;
+	float lower = 0;
 	//Start timer24 which is used to time when each ADC measurement is captured
 	HAL_TIM_Base_Start(&htim24);
 
@@ -1785,7 +1794,9 @@ void adjust_plasma(char log, int voltage, char auto_freq)
 	if (auto_freq == 1) {
 		//Calculate delta f
 		int16_t freqCorr;
-		freqCorrection(&freqCorr);
+
+
+		freqCorrection(&freqCorr, &upper, &lower);
 
 
 
@@ -1831,7 +1842,7 @@ void adjust_plasma(char log, int voltage, char auto_freq)
 
 	//Print current ADC data
 	if (log == 1) {
-		printHbridgeDatalogging(startTime, stopTime-3);//stop time - 3 which is equivalent to subtracting 1.5us to account for overhead
+		printHbridgeDatalogging(startTime, stopTime-3, upper, lower);//stop time - 3 which is equivalent to subtracting 1.5us to account for overhead
 	}
 
 
@@ -1842,7 +1853,7 @@ void adjust_plasma(char log, int voltage, char auto_freq)
  * Prints the header for the csv log file
  */
 void print_log_header() {
-	printString("Time(us),Freq (Hz),Deadtime (%),Bridge I,VplaL1,VplaL2,VbriS1,VbriS2,TIM1 status");
+	printString("Time(us),Freq (Hz),Deadtime (%),Bridge I,VplaL1,VplaL2,VbriS1,VbriS2,TIM1 status,upper freq calc point, lower freq calc point");
 	printCR();
 }
 
@@ -2226,23 +2237,8 @@ static void remoteControl()
 			break;
 
 		case ACTIVE:
-			//This period will be logged (i.e. 'logging_rate' periods have passed since last log update
-
-			if (current_state.rate_counter == current_state.log_rate) {
 				adjust_plasma(current_state.print_log, current_state.voltage, current_state.auto_freq);
-				current_state.rate_counter = 0;
 				current_state.print_log = 0;
-			} else if (current_state.print_log != current_state.log_rate) {
-				adjust_plasma(0, current_state.voltage, current_state.auto_freq);
-				current_state.print_log = 0;
-			}
-
-
-
-			//if a logging rate is specified, the counter is updated. other wise the counter remains at zero
-			if (current_state.log_rate != 0) {
-				current_state.rate_counter++;
-			}
 			break;
 
 		}
