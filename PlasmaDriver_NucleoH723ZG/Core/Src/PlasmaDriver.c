@@ -949,7 +949,7 @@ float convertADC3data(uint32_t item, char **text)
 			*text ="ADC3_BridgeTemp (mV)";
 			break;
 		case ADC3_500VDC:
-			result =  1000*((12.0+2000.0)/12.0)*3.3*(((float) sADC.adc3_data[ADC3_500VDC])/4096.0);
+			result =  (1000*((12.0+2000.0)/12.0)*3.3*(((float) sADC.adc3_data[ADC3_500VDC])/4096.0)) * 0.129; //0.129 is a measured correction factor.
 			*text ="ADC3_500VDC (mV)";
 			break;
 		case ADC3_Thermistor1:
