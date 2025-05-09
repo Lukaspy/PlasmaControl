@@ -57,7 +57,7 @@ static char *config_menu[CONFIG_MENU_SIZE];
 
 // The data above defines a group. One group of data will consist of 6 data elements of size 16 bit; one from each channel.
 // The number of groups is defined by
-#define ADC12_MAX_GROUP 200//100				// Maximum number of groups Originally set to 100, increased to 200.
+#define ADC12_MAX_GROUP 100 // Maximum number of groups 
 #define ADC12_GROUP_READTIME 1.0000E-6	// Read time for a group in seconds
 
 // The ADC's are setup in continues mode and will repeat reading until all DMA requests have been handled.
