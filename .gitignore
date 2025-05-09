@@ -1,0 +1,10 @@
+*.pyc
+*.elf
+*.list
+*.map
+*.cyclo
+*.o
+*.su
+
+.vscode
+*.csv
